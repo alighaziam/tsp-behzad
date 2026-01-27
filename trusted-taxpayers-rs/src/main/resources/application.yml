@@ -33,6 +33,9 @@ spring:
         order_updates: true
         connection:
           provider_disables_autocommit: true
+        jpa:
+          compliance:
+            attribute_converters: true
         show_sql: false
         format_sql: false
         use_sql_comments: false

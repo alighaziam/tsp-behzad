@@ -1,7 +1,9 @@
 package ir.tax.trustedtaxpayers.infrastructure.jpa.entity;
 
 import ir.tax.trustedtaxpayers.core.entity.BaseEntity;
+import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -11,8 +13,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.BatchSize;
-import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
-import jakarta.persistence.Convert;
+
 import java.util.UUID;
 
 
@@ -43,4 +44,3 @@ public class BaseInfoEntity extends BaseEntity {
     @Column(name = "CATEGORY", nullable = false, length = 100)
     private String category;
 }
-

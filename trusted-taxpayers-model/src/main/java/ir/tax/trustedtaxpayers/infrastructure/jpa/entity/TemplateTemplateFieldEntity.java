@@ -1,8 +1,8 @@
 package ir.tax.trustedtaxpayers.infrastructure.jpa.entity;
 
-import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
 import ir.tax.trustedtaxpayers.enums.FieldRequirementType;
 import ir.tax.trustedtaxpayers.enums.FieldSection;
+import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -39,4 +39,3 @@ public class TemplateTemplateFieldEntity {
     @Column(name = "ENABLE", columnDefinition = "NUMBER(1) DEFAULT 1", nullable = false)
     private Boolean enable = true;
 }
-

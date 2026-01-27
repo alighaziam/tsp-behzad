@@ -1,5 +1,6 @@
 package ir.tax.trustedtaxpayers.infrastructure.jpa.entity;
 
+import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,7 +29,8 @@ import java.util.UUID;
 public class TemplateTemplateTypeEntity {
     
     @Id
-    @Column(name = "ID", nullable = false, updatable = false)
+    @Convert(converter = RawUuidConverter.class)
+    @Column(name = "ID", nullable = false, updatable = false, columnDefinition = "RAW(16)")
     private UUID id;
     @PrePersist
     protected void ensureId() {
@@ -45,4 +47,3 @@ public class TemplateTemplateTypeEntity {
     @JoinColumn(name = "TEMPLATE_TYPE_ID", nullable = false)
     private TemplateTypeEntity templateType;
 }
-
