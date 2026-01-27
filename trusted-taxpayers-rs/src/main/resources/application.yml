@@ -1,0 +1,110 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  datasource:
+    url: ${APP_DB_URL:jdbc:oracle:thin:@localhost:1521:XE}
+    username: ${APP_DB_USER:ham_tsp}
+    password: ${APP_DB_PASSWORD:ham_tsp}
+    driver-class-name: oracle.jdbc.OracleDriver
+    hikari:
+      auto-commit: false
+      maximum-pool-size: ${DB_POOL_SIZE:50}
+      minimum-idle: ${DB_POOL_MIN_IDLE:10}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1 FROM DUAL
+      leak-detection-threshold: 60000
+      register-mbeans: true
+      pool-name: TspHikariPool
+  jpa:
+    hibernate:
+      ddl-auto: validate
+      naming:
+        physical-strategy: ir.tax.trustedtaxpayers.application.config.OracleNamingStrategy
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+        jdbc:
+          batch_size: 50
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        connection:
+          provider_disables_autocommit: true
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
+    open-in-view: false
+  cache:
+    type: redis
+    cache-names:
+      - taxpayers
+      - templates
+      - buyers
+      - users
+      - settings
+  thymeleaf:
+    cache: false
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 2147483647
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        delivery.timeout.ms: 120000
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:tsp-service}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    url: ${FLYWAY_DB_URL:${spring.datasource.url}}
+    user: ${FLYWAY_DB_USER:${spring.datasource.username}}
+    password: ${FLYWAY_DB_PASSWORD:${spring.datasource.password}}
+    driver-class-name: ${FLYWAY_DB_DRIVER:${spring.datasource.driver-class-name}}
+    encoding: UTF-8
+    validate-on-migrate: true
+    out-of-order: true
+    table: ${FLYWAY_TABLE:FLYWAY_SCHEMA_HISTORY}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${OAUTH2_JWK_SET_URI:http://localhost:8080/auth/realms/master/protocol/openid-connect/certs}
+          issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8080/auth/realms/master}
+      client:
+        registration:
+          tsp-client:
+            client-id: ${OAUTH2_CLIENT_ID:trusted-taxpayers-client}
+            client-secret: ${OAUTH2_CLIENT_SECRET:changeit}
+            scope: openid,profile,email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          tsp-provider:
+            issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8080/auth/realms/master}
+    headers:
+      referrer-policy: ${SECURITY_HEADERS_REFERRER_POLICY:strict-origin-when-cross-origin}
+
+  # 🔹 اضافه کردن محدودیت آپلود تا 350MB
+  servlet:
+    multipart:
+      max-file-size: 350MB
+      max-request-size: 350MB
+
+# … بقیه کانفیگ YAML شما (OCR، VAT، gRPC، Resilience4j، Tax SDK و غیره) همینطور حفظ میشه

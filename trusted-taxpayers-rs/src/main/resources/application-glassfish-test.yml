@@ -1,0 +1,347 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 350MB
+      max-request-size: 350MB
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+  datasource:
+    jndi-name: jdbc/tspDS_local
+  jpa:
+    hibernate:
+      ddl-auto: none
+      # Use custom naming strategy for Oracle to preserve uppercase table names
+      naming:
+        physical-strategy: ir.tax.trustedtaxpayers.application.config.OracleNamingStrategy
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.OracleDialect
+        # Batch Processing Configuration
+        jdbc:
+          batch_size: 50
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+        # Connection Pool Settings
+        connection:
+          provider_disables_autocommit: true
+        # SQL Logging (disable in production for better performance)
+        show_sql: true
+        format_sql: false
+        use_sql_comments: false
+    open-in-view: false
+  # Cache Configuration
+  cache:
+    type: simple
+    cache-names:
+      - taxpayers
+      - templates
+      - buyers
+      - users
+      - settings
+  thymeleaf:
+    cache: false
+  messages:
+    basename: messages/messages
+    encoding: UTF-8
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 2147483647
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        delivery.timeout.ms: 120000
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:tsp-service}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+  data:
+    redis:
+      host: 172.16.201.43
+      port: 6379
+      password: manager@
+  flyway:
+    ##url: ${APP_DB_URL:jdbc:oracle:thin:@//172.16.201.48:1521/db}
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  #  url: ${APP_DB_URL:jdbc:oracle:thin:@//172.16.201.48:1521/db}
+    url: ${APP_DB_URL:jdbc:oracle:thin:@//localhost:1521/XE}
+    user:  ${APP_DB_USER:ham_tsp}
+    password: ${APP_DB_PASSWORD:ham_tsp}
+    driver-class-name: oracle.jdbc.OracleDriver
+    encoding: UTF-8
+    validate-on-migrate: true
+    out-of-order: true
+    table: ${FLYWAY_TABLE:FLYWAY_SCHEMA_HISTORY}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # JWK Set URI for token validation
+          jwk-set-uri: ${OAUTH2_JWK_SET_URI:http://localhost:8080/trusted-taxpayers-rs-1.0/auth/realms/master/protocol/openid-connect/certs}
+          # Issuer URI
+          issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8080/trusted-taxpayers-rs-1.0/auth/realms/master}
+#      client:
+#        registration:
+#          tsp-client:
+#            client-id: ${OAUTH2_CLIENT_ID:trusted-taxpayers-client}
+#            client-secret: ${OAUTH2_CLIENT_SECRET:changeit}
+#            scope: openid
+#            authorization-grant-type: authorization_code
+#            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+#            provider: tsp-provider
+#        provider:
+#          tsp-provider:
+#            issuer-uri: ${OAUTH2_ISSUER_URI:http://localhost:8080/trusted-taxpayers-rs-1.0/auth/realms/master}
+vat:
+  type1:
+    b2c-rate: 9
+  utilities:
+    b2c-rate: 6
+rounding:
+  payable:
+    to-thousand: true
+
+server:
+  port: 8080
+
+grpc:
+  server:
+    port: ${GRPC_SERVER_PORT:9090}
+    # Enable gRPC reflection for testing with grpcurl
+    reflection:
+      enabled: ${GRPC_REFLECTION_ENABLED:true}
+    max-inbound-message-size: ${GRPC_MAX_INBOUND_MESSAGE_SIZE:4194304}
+    max-inbound-metadata-size: ${GRPC_MAX_INBOUND_METADATA_SIZE:8192}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    redis:
+      enabled: false
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+    ping:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: trusted-taxpayers
+
+# Rate Limiting Toggle (برای حذف وابستگی به Redis در محیط‌های فاقد رِدیس)
+rate:
+  limit:
+    enabled: ${RATE_LIMIT_ENABLED:false}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    use-root-path: false
+    operations-sorter: method
+    tags-sorter: alpha
+
+application:
+  cache:
+    default-ttl-seconds: ${APP_CACHE_DEFAULT_TTL_SECONDS:300}
+    toggle-cache-ttl-seconds: ${APP_CACHE_TOGGLE_CACHE_TTL_SECONDS:60}
+  kafka:
+    enabled: ${APP_KAFKA_ENABLED:false}
+    topics:
+      main: ${APP_KAFKA_TOPIC_MAIN:tsp.events}
+  outbox:
+    dispatcher:
+      fixed-delay-ms: ${APP_OUTBOX_DISPATCHER_FIXED_DELAY_MS:5000}
+
+# OCR Configuration
+ocr:
+  # فعال/غیرفعال کردن OCR خارجی (API)
+  external:
+    enabled: ${OCR_EXTERNAL_ENABLED:true}
+    # API Key اختیاری برای OCR.space (اگر دارید، rate limit بالاتر است)
+    # می‌توانید از https://ocr.space/ocrapi/freekey دریافت کنید
+    api-key: ${OCR_EXTERNAL_API_KEY:}
+    # Timeout برای API خارجی (میلی‌ثانیه)
+    timeout:
+      connect: ${OCR_EXTERNAL_TIMEOUT_CONNECT:10000}  # 10 ثانیه
+      read: ${OCR_EXTERNAL_TIMEOUT_READ:60000}        # 60 ثانیه (API خارجی ممکن است کند باشد)
+
+  # تنظیمات پیش‌پردازش تصویر
+  preprocessing:
+    # کاهش نویز
+    noise-reduction:
+      enabled: ${OCR_PREPROCESSING_NOISE_REDUCTION_ENABLED:true}
+      method: ${OCR_PREPROCESSING_NOISE_REDUCTION_METHOD:MEDIAN}  # MEDIAN, GAUSSIAN
+      kernel-size: ${OCR_PREPROCESSING_NOISE_REDUCTION_KERNEL_SIZE:3}  # باید فرد باشد: 3, 5, 7
+
+    # Thresholding (تبدیل به تصویر دو رنگ)
+    thresholding:
+      method: ${OCR_PREPROCESSING_THRESHOLDING_METHOD:AUTO}  # AUTO, OTSU, ADAPTIVE
+      adaptive-block-size: ${OCR_PREPROCESSING_THRESHOLDING_ADAPTIVE_BLOCK_SIZE:11}  # باید فرد باشد
+      adaptive-c: ${OCR_PREPROCESSING_THRESHOLDING_ADAPTIVE_C:2}  # ثابت C
+
+    # عملیات مورفولوژیک
+    morphology:
+      enabled: ${OCR_PREPROCESSING_MORPHOLOGY_ENABLED:true}
+      operation: ${OCR_PREPROCESSING_MORPHOLOGY_OPERATION:CLOSE}  # CLOSE, OPEN, DILATE, ERODE
+      kernel-size: ${OCR_PREPROCESSING_MORPHOLOGY_KERNEL_SIZE:2}  # باید فرد باشد
+      iterations: ${OCR_PREPROCESSING_MORPHOLOGY_ITERATIONS:1}
+
+    # Deskewing (اصلاح کجی تصویر)
+    deskewing:
+      enabled: ${OCR_PREPROCESSING_DESKEWING_ENABLED:true}
+      max-angle: ${OCR_PREPROCESSING_DESKEWING_MAX_ANGLE:15.0}  # حداکثر زاویه برای اصلاح (درجه)
+
+    # بهبود کنتراست
+    contrast:
+      enabled: ${OCR_PREPROCESSING_CONTRAST_ENABLED:true}
+      method: ${OCR_PREPROCESSING_CONTRAST_METHOD:HISTOGRAM}  # HISTOGRAM, STRETCHING
+
+    # Sharpening (افزایش وضوح)
+    sharpen:
+      enabled: ${OCR_PREPROCESSING_SHARPEN_ENABLED:false}  # به صورت پیش‌فرض غیرفعال
+      strength: ${OCR_PREPROCESSING_SHARPEN_STRENGTH:0.5}  # 0.0 تا 1.0
+
+# OAuth2 Configuration (مشابه samt-git)
+security:
+  oauth2:
+    client:
+      client-id: ${OAUTH2_CLIENT_ID:trusted-taxpayers-client}
+      client-secret: ${OAUTH2_CLIENT_SECRET:changeit}
+      username: ${OAUTH2_USERNAME:tsp_client}
+      password: ${OAUTH2_PASSWORD:changeit}
+      scope: openid
+
+# Platform OAuth2 (برای فراخوانی Platform API)
+platform:
+  security:
+    oauth2:
+      client:
+        url: ${PLATFORM_OAUTH2_URL:}
+        client-id: ${PLATFORM_OAUTH2_CLIENT_ID:}
+        client-secret: ${PLATFORM_OAUTH2_CLIENT_SECRET:}
+        username: ${PLATFORM_OAUTH2_USERNAME:}
+        password: ${PLATFORM_OAUTH2_PASSWORD:}
+        scope: openid
+
+# Taxpayer System Integration Configuration
+taxpayer-system:
+  base-url: ${TAXPAYER_SYSTEM_URL:http://localhost:9090}
+  api-path: ${TAXPAYER_SYSTEM_API_PATH:/api/invoices}
+  org-public-key: ${TAX_ORG_PUBLIC_KEY:}
+  org-key-id: ${TAX_ORG_KEY_ID:}
+  client-id: ${TAX_CLIENT_ID:}
+  timeout:
+    connect: 10000
+    read: 30000
+  retry:
+    max-attempts: 3
+    backoff-delay: 1000
+
+# Resilience4j Configuration
+resilience4j:
+  retry:
+    configs:
+      default:
+        max-attempts: ${RESILIENCE4J_RETRY_MAX_ATTEMPTS:3}
+        wait-duration: ${RESILIENCE4J_RETRY_WAIT_DURATION_MS:1000}
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2.0
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.net.SocketTimeoutException
+          - java.io.IOException
+    instances:
+      taxpayerSystemClient:
+        max-attempts: 5
+        wait-duration: 2000
+        enable-exponential-backoff: true
+      grpcClient:
+        max-attempts: 3
+        wait-duration: 1000
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: ${RESILIENCE4J_CB_SLIDING_WINDOW_SIZE:10}
+        minimum-number-of-calls: ${RESILIENCE4J_CB_MIN_CALLS:5}
+        permitted-number-of-calls-in-half-open-state: ${RESILIENCE4J_CB_PERMITTED_CALLS_HALF_OPEN:3}
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: ${RESILIENCE4J_CB_WAIT_DURATION_OPEN_STATE_MS:10000}
+        failure-rate-threshold: ${RESILIENCE4J_CB_FAILURE_RATE_THRESHOLD:50}
+        slow-call-rate-threshold: ${RESILIENCE4J_CB_SLOW_CALL_RATE_THRESHOLD:100}
+        slow-call-duration-threshold: ${RESILIENCE4J_CB_SLOW_CALL_DURATION_MS:60000}
+        record-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.net.SocketTimeoutException
+          - java.io.IOException
+    instances:
+      taxpayerSystemClient:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 30000
+      grpcClient:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+
+# Tax SDK Configuration (Indota - ایندوتا)
+tax:
+  sdk:
+    # فعال یا غیرفعال بودن SDK
+    enabled: ${TAX_SDK_ENABLED:true}
+
+    # آدرس سرور سامانه مودیان
+    # Production: https://tp.tax.gov.ir/requestsmanager/api/self-tsp
+    # Test: https://tp-nta.abriment.mohaymen.ir/requestsmanager/api/self-tsp
+    base-url: ${TAX_SDK_BASE_URL:https://tp-nta.abriment.mohaymen.ir/requestsmanager/api/self-tsp}
+
+    # شناسه حافظه مالیاتی (Memory ID / Fiscal ID)
+    # مثال: A111H3
+    memory-id: ${TAX_SDK_MEMORY_ID:A111H3}
+
+    # مسیر فایل کلید خصوصی (Private Key)
+    # می‌تواند مسیر مطلق یا classpath باشد
+    # مثال: /path/to/private.pem یا classpath:keys/private.pem
+    private-key-path: ${TAX_SDK_PRIVATE_KEY_PATH:classpath:keys/private.pem}
+
+    # رمز عبور کلید خصوصی (در صورت وجود)
+    private-key-password: ${TAX_SDK_PRIVATE_KEY_PASSWORD:}
+
+    # شناسه مشتری (برای TSP با کلید خود)
+    # مثال: TP1101
+    client-id: ${TAX_SDK_CLIENT_ID:TP1101}
+
+    # تعداد تلاش مجدد در صورت خطا
+    retry-attempts: ${TAX_SDK_RETRY_ATTEMPTS:3}
+
+    # زمان انتظار بین تلاش‌های مجدد (میلی‌ثانیه)
+    retry-delay-ms: ${TAX_SDK_RETRY_DELAY_MS:1000}
+
+    # زمان انتظار برای درخواست‌ها (میلی‌ثانیه)
+    request-timeout-ms: ${TAX_SDK_REQUEST_TIMEOUT_MS:30000}
+
+
+
+

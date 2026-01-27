@@ -1,0 +1,13 @@
+# Ignore all private key files
+!*.pem
+*.key
+*.pfx
+*.p12
+*.der
+*.cer
+*.crt
+
+# Except the README
+!README.md
+!.gitignore
+

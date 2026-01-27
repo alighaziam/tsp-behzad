@@ -1,0 +1,48 @@
+CREATE TABLE TEMPLATE_TEMPLATE_TYPE (
+  ID RAW(16) NOT NULL,
+  TEMPLATE_ID RAW(16) NOT NULL,
+  TEMPLATE_TYPE_ID RAW(16) NOT NULL
+);
+
+ALTER TABLE TEMPLATE_TEMPLATE_TYPE ADD CONSTRAINT PK_TEMPLATE_TEMPLATE_TYPE PRIMARY KEY (ID);
+
+ALTER TABLE TEMPLATE_TEMPLATE_TYPE ADD CONSTRAINT UK_TEMPLATE_TEMPLATE_TYPE UNIQUE (TEMPLATE_ID, TEMPLATE_TYPE_ID);
+
+CREATE INDEX IDX_TEMPLATE_TEMPLATE_TYPE_TEMPLATE_ID ON TEMPLATE_TEMPLATE_TYPE(TEMPLATE_ID);
+
+CREATE INDEX IDX_TEMPLATE_TEMPLATE_TYPE_TEMPLATE_TYPE_ID ON TEMPLATE_TEMPLATE_TYPE(TEMPLATE_TYPE_ID);
+
+--------------------------(Data Entry)---------------------
+/*******************************************************************************
+** SCRIPT: POPULATE TEMPLATE_TEMPLATE_TYPE
+** DESCRIPTION: Maps Templates to their respective Types (Buyer & Contract status)
+** LOGIC:
+** - Patterns ending in TYPE1 -> Mapped to 'WITH_BUYER'
+** - Patterns ending in TYPE2 -> Mapped to 'WITHOUT_BUYER'
+** - Pattern 'CONTRACT_TEMPLATE_TYPE1' -> Mapped to 'WITH_CONTRACT'
+** - All other patterns -> Mapped to 'WITHOUT_CONTRACT'
+*******************************************************************************/
+
+INSERT INTO TEMPLATE_TEMPLATE_TYPE (ID, TEMPLATE_ID, TEMPLATE_TYPE_ID)
+SELECT
+    SYS_GUID(),
+    t.ID,
+    tt.ID
+FROM TEMPLATE t
+         JOIN TEMPLATE_TYPE tt ON (
+    /* 1. Mapping Buyer Requirement Status */
+    (t.CODE LIKE '%TYPE1' AND tt.CODE = 'WITH_BUYER') OR
+    (t.CODE LIKE '%TYPE2' AND tt.CODE = 'WITHOUT_BUYER') OR
+
+        /* 2. Mapping Contract Requirement Status */
+    (t.CODE = 'CONTRACT_TEMPLATE_TYPE1' AND tt.CODE = 'WITH_CONTRACT') OR
+    (t.CODE != 'CONTRACT_TEMPLATE_TYPE1' AND tt.CODE = 'WITHOUT_CONTRACT')
+    )
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM TEMPLATE_TEMPLATE_TYPE x
+    WHERE x.TEMPLATE_ID = t.ID
+      AND x.TEMPLATE_TYPE_ID = tt.ID
+);
+
+COMMIT;

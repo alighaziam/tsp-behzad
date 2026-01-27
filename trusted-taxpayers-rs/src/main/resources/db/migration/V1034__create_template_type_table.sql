@@ -1,0 +1,76 @@
+CREATE TABLE TEMPLATE_TYPE
+(
+    ID          RAW(16) NOT NULL,
+    IS_ACTIVE   NUMBER(1) DEFAULT 1 NOT NULL,
+    CREATED_ON  TIMESTAMP WITH TIME ZONE NOT NULL,
+    UPDATED_ON  TIMESTAMP WITH TIME ZONE,
+    CREATED_BY  VARCHAR2(100),
+    UPDATED_BY  VARCHAR2(100),
+    CODE        VARCHAR2(50 CHAR) NOT NULL,
+    TITLE       VARCHAR2(200 CHAR) NOT NULL,
+    DESCRIPTION VARCHAR2(4000)
+);
+
+ALTER TABLE TEMPLATE_TYPE
+    ADD CONSTRAINT PK_TEMPLATE_TYPE PRIMARY KEY (ID);
+
+ALTER TABLE TEMPLATE_TYPE
+    ADD CONSTRAINT UK_TEMPLATE_TYPE_CODE UNIQUE (CODE);
+
+--------------------------(Data Entry)---------------------
+
+--------------------------(Data Entry)---------------------
+/*******************************************************************************
+** SCRIPT: POPULATE TEMPLATE_TYPE TABLE
+** DESCRIPTION: Inserting Template Types without hardcoded IDs
+*******************************************************************************/
+
+-- 1. WITH_BUYER
+INSERT INTO TEMPLATE_TYPE (ID, CODE, TITLE, DESCRIPTION, IS_ACTIVE, CREATED_ON, UPDATED_ON)
+SELECT SYS_GUID(),
+       'WITH_BUYER',
+       'با خریدار',
+       'نوع قالب برای صورتحساب‌هایی که خریدار دارند',
+       1,
+       SYSTIMESTAMP,
+       SYSTIMESTAMP
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM TEMPLATE_TYPE WHERE CODE = 'WITH_BUYER');
+
+-- 2. WITHOUT_BUYER
+INSERT INTO TEMPLATE_TYPE (ID, CODE, TITLE, DESCRIPTION, IS_ACTIVE, CREATED_ON, UPDATED_ON)
+SELECT SYS_GUID(),
+       'WITHOUT_BUYER',
+       'بدون خریدار',
+       'نوع قالب برای صورتحساب‌هایی که خریدار ندارند',
+       1,
+       SYSTIMESTAMP,
+       SYSTIMESTAMP
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM TEMPLATE_TYPE WHERE CODE = 'WITHOUT_BUYER');
+
+-- 3. WITH_CONTRACT
+INSERT INTO TEMPLATE_TYPE (ID, CODE, TITLE, DESCRIPTION, IS_ACTIVE, CREATED_ON, UPDATED_ON)
+SELECT SYS_GUID(),
+       'WITH_CONTRACT',
+       'با قرارداد',
+       'نوع قالب برای صورتحساب‌هایی که قرارداد دارند',
+       1,
+       SYSTIMESTAMP,
+       SYSTIMESTAMP
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM TEMPLATE_TYPE WHERE CODE = 'WITH_CONTRACT');
+
+-- 4. WITHOUT_CONTRACT
+INSERT INTO TEMPLATE_TYPE (ID, CODE, TITLE, DESCRIPTION, IS_ACTIVE, CREATED_ON, UPDATED_ON)
+SELECT SYS_GUID(),
+       'WITHOUT_CONTRACT',
+       'بدون قرارداد',
+       'نوع قالب برای صورتحساب‌هایی که قرارداد ندارند',
+       1,
+       SYSTIMESTAMP,
+       SYSTIMESTAMP
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM TEMPLATE_TYPE WHERE CODE = 'WITHOUT_CONTRACT');
+
+COMMIT;

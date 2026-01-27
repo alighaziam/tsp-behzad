@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package ir.tax.trustedtaxpayers.grpc;
+
+option java_multiple_files = true;
+option java_package = "ir.tax.trustedtaxpayers.grpc";
+option java_outer_classname = "TaxServiceProto";
+
+// سرویس gRPC برای عملیات‌های مالیاتی
+service TaxService {
+  // ارسال صورتحساب
+  rpc SubmitInvoice (SubmitInvoiceRequest) returns (SubmitInvoiceResponse);
+  
+  // دریافت وضعیت صورتحساب
+  rpc GetInvoiceStatus (GetInvoiceStatusRequest) returns (GetInvoiceStatusResponse);
+  
+  // لیست صورتحساب‌ها
+  rpc ListInvoices (ListInvoicesRequest) returns (ListInvoicesResponse);
+}
+
+// درخواست ارسال صورتحساب
+message SubmitInvoiceRequest {
+  string invoice_id = 1;
+  string taxpayer_id = 2;
+  map<string, string> metadata = 3;
+}
+
+// پاسخ ارسال صورتحساب
+message SubmitInvoiceResponse {
+  bool success = 1;
+  string message = 2;
+  string submission_id = 3;
+  int64 timestamp = 4;
+}
+
+// درخواست دریافت وضعیت
+message GetInvoiceStatusRequest {
+  string invoice_id = 1;
+}
+
+// پاسخ وضعیت صورتحساب
+message GetInvoiceStatusResponse {
+  string invoice_id = 1;
+  string status = 2; // SUBMITTED, ACCEPTED, REJECTED, PENDING
+  string message = 3;
+  int64 timestamp = 4;
+}
+
+// درخواست لیست صورتحساب‌ها
+message ListInvoicesRequest {
+  string taxpayer_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+// پاسخ لیست صورتحساب‌ها
+message ListInvoicesResponse {
+  repeated InvoiceSummary invoices = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+}
+
+// خلاصه صورتحساب
+message InvoiceSummary {
+  string invoice_id = 1;
+  string status = 2;
+  int64 created_at = 3;
+  string taxpayer_id = 4;
+}
+

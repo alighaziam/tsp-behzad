@@ -1,0 +1,4 @@
+invoiceNumber,issueDate,sellerTaxId,buyerTaxId,currency,totalAmount,itemName,itemQty,itemUnitPrice
+INV-001,2025-11-16,57490845111,12345678901,IRR,12255,نمونه کالا,2,5000
+
+

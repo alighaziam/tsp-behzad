@@ -1,0 +1,82 @@
+# ============================================================
+# Performance Optimization Configuration
+# ============================================================
+# این فایل تنظیمات بهینه‌سازی performance را شامل می‌شود
+# می‌توانید این تنظیمات را در application.yml یا application-{profile}.yml اضافه کنید
+
+spring:
+  datasource:
+    # HikariCP Connection Pool Configuration
+    hikari:
+      # تعداد connection های همزمان
+      maximum-pool-size: 20
+      # حداقل تعداد connection های همیشه باز
+      minimum-idle: 5
+      # زمان انتظار برای گرفتن connection (میلی‌ثانیه)
+      connection-timeout: 30000
+      # زمان idle بودن connection قبل از بسته شدن (میلی‌ثانیه)
+      idle-timeout: 600000
+      # حداکثر زمان زنده ماندن connection (میلی‌ثانیه) - برای Oracle توصیه می‌شود
+      max-lifetime: 1800000
+      # تست کردن connection قبل از استفاده
+      connection-test-query: SELECT 1 FROM DUAL
+      # فعال کردن leak detection
+      leak-detection-threshold: 60000
+      
+  jpa:
+    properties:
+      hibernate:
+        # Batch Insert/Update Configuration
+        # تعداد entity هایی که در یک batch insert/update قرار می‌گیرند
+        jdbc:
+          batch_size: 50
+          batch_versioned_data: true
+        # فعال کردن order_inserts برای بهبود performance batch inserts
+        order_inserts: true
+        order_updates: true
+        # فعال کردن batch fetching
+        jdbc.batch_size: 50
+        
+        # Query Cache (اگر نیاز به second-level cache داشته باشید)
+        # cache.use_second_level_cache: false
+        # cache.use_query_cache: false
+        
+        # Statistics (فقط برای development)
+        generate_statistics: false
+        
+        # Connection Pool Settings
+        connection:
+          provider_disables_autocommit: true
+          
+        # JDBC Settings
+        jdbc:
+          # زمان انتظار برای گرفتن connection از pool
+          time_zone: UTC
+          # استفاده از prepared statement cache
+          statement_batch_size: 50
+          
+        # SQL Logging (فقط برای development - در production غیرفعال کنید)
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
+
+# ============================================================
+# Cache Configuration
+# ============================================================
+spring:
+  cache:
+    type: simple  # یا caffeine برای cache قوی‌تر
+    cache-names:
+      - taxpayers
+      - templates
+      - buyers
+      - users
+    # برای استفاده از Caffeine Cache (قوی‌تر از simple cache):
+    # cache:
+    #   type: caffeine
+    #   caffeine:
+    #     spec: maximumSize=1000,expireAfterWrite=1h
+  #   cache:
+  #     caffeine:
+  #       spec: maximumSize=1000,expireAfterWrite=1h
+

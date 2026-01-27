@@ -1,0 +1,153 @@
+-- ============================================================
+-- Fix SUBSCRIPTION_PLANS table if missing
+-- This script checks if the table exists and creates it if needed
+-- ============================================================
+
+-- Check if SUBSCRIPTION_PLANS table exists
+DECLARE
+  v_table_exists NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_table_exists
+  FROM USER_TABLES
+  WHERE TABLE_NAME = 'SUBSCRIPTION_PLANS';
+  
+  IF v_table_exists = 0 THEN
+    DBMS_OUTPUT.PUT_LINE('SUBSCRIPTION_PLANS table does not exist. Creating it...');
+    
+    -- Create SUBSCRIPTION_PLANS table
+    EXECUTE IMMEDIATE 'CREATE TABLE SUBSCRIPTION_PLANS (
+      ID              RAW(16) DEFAULT SYS_GUID() PRIMARY KEY,
+      CODE            VARCHAR2(50 CHAR) NOT NULL UNIQUE,
+      NAME            VARCHAR2(200 CHAR) NOT NULL,
+      DESCRIPTION     VARCHAR2(1000 CHAR),
+      PRICE           NUMBER(18,2) NOT NULL,
+      CURRENCY        VARCHAR2(10 CHAR) DEFAULT ''IRR'' NOT NULL,
+      DURATION_DAYS   NUMBER(10) NOT NULL,
+      MAX_INVOICES    NUMBER(10),
+      FEATURES        CLOB,
+      IS_ACTIVE       NUMBER(1) DEFAULT 1 NOT NULL,
+      CREATED_ON      TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+      UPDATED_ON      TIMESTAMP,
+      CREATED_BY      VARCHAR2(100 CHAR),
+      UPDATED_BY      VARCHAR2(100 CHAR)
+    )';
+    
+    DBMS_OUTPUT.PUT_LINE('SUBSCRIPTION_PLANS table created successfully.');
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('SUBSCRIPTION_PLANS table already exists.');
+  END IF;
+END;
+/
+
+-- Check if TAXPAYER_SUBSCRIPTIONS table exists
+DECLARE
+  v_table_exists NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_table_exists
+  FROM USER_TABLES
+  WHERE TABLE_NAME = 'TAXPAYER_SUBSCRIPTIONS';
+  
+  IF v_table_exists = 0 THEN
+    DBMS_OUTPUT.PUT_LINE('TAXPAYER_SUBSCRIPTIONS table does not exist. Creating it...');
+    
+    -- First check if SUBSCRIPTION_PLANS exists (required for FK)
+    DECLARE
+      v_plans_exists NUMBER;
+    BEGIN
+      SELECT COUNT(*) INTO v_plans_exists
+      FROM USER_TABLES
+      WHERE TABLE_NAME = 'SUBSCRIPTION_PLANS';
+      
+      IF v_plans_exists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'SUBSCRIPTION_PLANS table must exist before creating TAXPAYER_SUBSCRIPTIONS');
+      END IF;
+    END;
+    
+    -- Create TAXPAYER_SUBSCRIPTIONS table
+    BEGIN
+      EXECUTE IMMEDIATE 'CREATE TABLE TAXPAYER_SUBSCRIPTIONS (
+        ID                RAW(16) DEFAULT SYS_GUID() PRIMARY KEY,
+        TAXPAYER_ID       RAW(16) NOT NULL,
+        PLAN_ID           RAW(16) NOT NULL,
+        START_DATE        DATE NOT NULL,
+        END_DATE          DATE NOT NULL,
+        STATUS            VARCHAR2(20 CHAR) DEFAULT ''ACTIVE'' NOT NULL,
+        REMAINING_INVOICES NUMBER(10),
+        PURCHASED_AT      TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+        PAYMENT_REFERENCE VARCHAR2(200 CHAR),
+        NOTES             VARCHAR2(1000 CHAR),
+        IS_ACTIVE         NUMBER(1) DEFAULT 1 NOT NULL,
+        CREATED_ON        TIMESTAMP DEFAULT SYSTIMESTAMP NOT NULL,
+        UPDATED_ON        TIMESTAMP,
+        CREATED_BY        VARCHAR2(100 CHAR),
+        UPDATED_BY        VARCHAR2(100 CHAR)
+      )';
+      
+      -- Add foreign key constraints separately
+      BEGIN
+        EXECUTE IMMEDIATE 'ALTER TABLE TAXPAYER_SUBSCRIPTIONS ADD CONSTRAINT FK_TS_TAXPAYER FOREIGN KEY (TAXPAYER_ID) REFERENCES TAXPAYER(ID)';
+      EXCEPTION
+        WHEN OTHERS THEN
+          IF SQLCODE = -2275 OR SQLCODE = -942 THEN
+            NULL; -- Constraint already exists or referenced table doesn't exist
+          ELSE
+            RAISE;
+          END IF;
+      END;
+      
+      BEGIN
+        EXECUTE IMMEDIATE 'ALTER TABLE TAXPAYER_SUBSCRIPTIONS ADD CONSTRAINT FK_TS_PLAN FOREIGN KEY (PLAN_ID) REFERENCES SUBSCRIPTION_PLANS(ID)';
+      EXCEPTION
+        WHEN OTHERS THEN
+          IF SQLCODE = -2275 OR SQLCODE = -942 THEN
+            NULL; -- Constraint already exists or referenced table doesn't exist
+          ELSE
+            RAISE;
+          END IF;
+      END;
+      
+      -- Create indexes
+      BEGIN
+        EXECUTE IMMEDIATE 'CREATE INDEX IDX_TS_TAXPAYER ON TAXPAYER_SUBSCRIPTIONS (TAXPAYER_ID)';
+      EXCEPTION
+        WHEN OTHERS THEN
+          IF SQLCODE = -955 OR SQLCODE = -1408 THEN NULL; ELSE RAISE; END IF;
+      END;
+      
+      BEGIN
+        EXECUTE IMMEDIATE 'CREATE INDEX IDX_TS_STATUS ON TAXPAYER_SUBSCRIPTIONS (STATUS)';
+      EXCEPTION
+        WHEN OTHERS THEN
+          IF SQLCODE = -955 OR SQLCODE = -1408 THEN NULL; ELSE RAISE; END IF;
+      END;
+      
+      BEGIN
+        EXECUTE IMMEDIATE 'CREATE INDEX IDX_TS_END_DATE ON TAXPAYER_SUBSCRIPTIONS (END_DATE)';
+      EXCEPTION
+        WHEN OTHERS THEN
+          IF SQLCODE = -955 OR SQLCODE = -1408 THEN NULL; ELSE RAISE; END IF;
+      END;
+      
+      DBMS_OUTPUT.PUT_LINE('TAXPAYER_SUBSCRIPTIONS table created successfully.');
+    EXCEPTION
+      WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error creating TAXPAYER_SUBSCRIPTIONS: ' || SQLERRM);
+        RAISE;
+    END;
+  ELSE
+    DBMS_OUTPUT.PUT_LINE('TAXPAYER_SUBSCRIPTIONS table already exists.');
+  END IF;
+END;
+/
+
+COMMIT;
+
+-- Verify tables exist
+SELECT 'SUBSCRIPTION_PLANS' AS TABLE_NAME, COUNT(*) AS EXISTS_FLAG
+FROM USER_TABLES
+WHERE TABLE_NAME = 'SUBSCRIPTION_PLANS'
+UNION ALL
+SELECT 'TAXPAYER_SUBSCRIPTIONS', COUNT(*)
+FROM USER_TABLES
+WHERE TABLE_NAME = 'TAXPAYER_SUBSCRIPTIONS';
+

@@ -1,0 +1,17 @@
+{
+  "invoices": [
+    {
+      "invoiceNumber": "INV-001",
+      "issueDate": "2025-11-16",
+      "sellerTaxId": "57490845111",
+      "buyerTaxId": "12345678901",
+      "currency": "IRR",
+      "totalAmount": 12255,
+      "items": [
+        { "itemName": "نمونه کالا", "itemQty": 2, "itemUnitPrice": 5000 }
+      ]
+    }
+  ]
+}
+
+
