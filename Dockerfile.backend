@@ -1,0 +1,50 @@
+# Dockerfile for Spring Boot Backend
+FROM maven:3.9-eclipse-temurin-21 AS build
+
+WORKDIR /app
+
+# Copy pom files first for better layer caching
+COPY pom.xml .
+COPY trusted-taxpayers-parent/pom.xml trusted-taxpayers-parent/
+COPY trusted-taxpayers-core/pom.xml trusted-taxpayers-core/
+COPY trusted-taxpayers-beans/pom.xml trusted-taxpayers-beans/
+COPY trusted-taxpayers-model/pom.xml trusted-taxpayers-model/
+COPY trusted-taxpayers-biz/pom.xml trusted-taxpayers-biz/
+COPY trusted-taxpayers-rs/pom.xml trusted-taxpayers-rs/
+
+# Copy Maven settings to skip internal repository
+COPY .mvn/settings.xml /root/.m2/settings.xml
+
+# Download dependencies with timeout settings
+RUN mvn dependency:go-offline -B || true
+
+# Copy source code
+COPY . .
+
+# Build the application with optimized settings
+RUN mvn clean package -DskipTests -B -T 1C
+
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
+
+WORKDIR /app
+
+# Install wget for healthcheck
+RUN apk add --no-cache wget
+
+# Copy the built JAR
+COPY --from=build /app/trusted-taxpayers-rs/target/*.jar app.jar
+
+# Create non-root user
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]

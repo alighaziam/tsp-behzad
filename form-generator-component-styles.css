@@ -1,0 +1,19 @@
+/* استایل برای کامپوننت فرم جنریتور */
+/* این فایل را در styleUrls کامپوننت فرم جنریتور اضافه کنید */
+
+:host ::ng-deep .validation {
+  font-size: 0.7rem !important;
+  color: #dc3545;
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+:host ::ng-deep small.validation {
+  font-size: 0.7rem !important;
+}
+
+:host ::ng-deep .validation.ng-star-inserted {
+  font-size: 0.7rem !important;
+}
+

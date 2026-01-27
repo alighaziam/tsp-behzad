@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # Oracle Database (using Oracle XE in a container)
+  # Note: For production, use Oracle Cloud Free Tier or a managed database
+  oracle-db:
+    image: container-registry.oracle.com/database/express:23.3.0.0
+    container_name: tsp-oracle-db
+    environment:
+      ORACLE_PWD: ${DB_PASSWORD:-ham_tsp}
+      ORACLE_CHARACTERSET: AL32UTF8
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD-SHELL", "sqlplus -S sys/${DB_PASSWORD:-ham_tsp}@localhost:1521/XE as sysdba <<< 'SELECT 1 FROM DUAL;' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - tsp-network
+
+  # Redis (optional, for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: tsp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - tsp-network
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: tsp-backend
+    environment:
+      # Database configuration
+      APP_DB_URL: jdbc:oracle:thin:@oracle-db:1521:XE
+      APP_DB_USER: ${DB_USER:-ham_tsp}
+      APP_DB_PASSWORD: ${DB_PASSWORD:-ham_tsp}
+      
+      # Redis configuration
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      
+      # Disable Kafka (not needed for basic deployment)
+      APP_KAFKA_ENABLED: false
+      
+      # Disable rate limiting (optional, requires Redis)
+      RATE_LIMIT_ENABLED: false
+      
+      # Spring profile
+      SPRING_PROFILES_ACTIVE: prod
+      
+      # Server port
+      SERVER_PORT: 8080
+      
+      # OAuth2 configuration (update with your values)
+      OAUTH2_ISSUER_URI: ${OAUTH2_ISSUER_URI:-http://localhost:8080/auth/realms/master}
+      OAUTH2_CLIENT_ID: ${OAUTH2_CLIENT_ID:-trusted-taxpayers-client}
+      OAUTH2_CLIENT_SECRET: ${OAUTH2_CLIENT_SECRET:-changeit}
+    ports:
+      - "8080:8080"
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - tsp-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./trusted-taxpayers-ui
+      dockerfile: Dockerfile
+    container_name: tsp-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      # API URL - will be set via nginx or environment
+      API_URL: http://backend:8080
+    networks:
+      - tsp-network
+    restart: unless-stopped
+
+volumes:
+  oracle-data:
+  redis-data:
+
+networks:
+  tsp-network:
+    driver: bridge
+

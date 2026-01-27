@@ -1,0 +1,118 @@
+<div class="advanced-invoice-container">
+  <form [formGroup]="headerForm" (ngSubmit)="onSubmit()">
+    
+    <!-- انتخاب الگو -->
+    <div class="form-group">
+      <label for="patternSelect">انتخاب الگو</label>
+      <select 
+        id="patternSelect" 
+        class="form-control"
+        (change)="onPatternSelect($event.target.value)"
+        [value]="selectedPattern">
+        <option value="">انتخاب کنید</option>
+        <!-- گزینه‌های الگو -->
+        <option value="SALE_TEMPLATE_1_TYPE1">الکترونیکی نوع اول - الگوی اول(فروش)</option>
+        <option value="CURRENCY_SALE_TEMPLATE_TYPE1">الکترونیکی نوع اول - الگوی دوم(فروش ارز)</option>
+        <!-- سایر گزینه‌ها... -->
+      </select>
+    </div>
+
+    <!-- فیلدهای داینامیک -->
+    <div class="form-fields-container">
+      <div 
+        *ngFor="let field of sortedHeaderFields" 
+        class="form-group"
+        [class.has-error]="hasError(field.code)">
+        
+        <label [for]="field.code">
+          {{ field.title }}
+          <span *ngIf="isRequired(field.code)" class="required-asterisk">*</span>
+        </label>
+        
+        <!-- استفاده از کامپوننت تاریخ شمسی برای فیلدهای تاریخ -->
+        <div *ngIf="isDateField(field)" class="date-picker-wrapper">
+          <!-- اگر از persian-datepicker استفاده می‌کنید: -->
+          <!--
+          <persian-datepicker
+            [formControlName]="field.code"
+            [class.is-invalid]="hasError(field.code)"
+            [placeholder]="field.title">
+          </persian-datepicker>
+          -->
+          
+          <!-- اگر از ng-persian-datepicker استفاده می‌کنید: -->
+          <!--
+          <ng-persian-datepicker
+            [formControlName]="field.code"
+            [class.is-invalid]="hasError(field.code)"
+            [placeholder]="field.title">
+          </ng-persian-datepicker>
+          -->
+          
+          <!-- اگر از کامپوننت سفارشی خودتان استفاده می‌کنید: -->
+          <!--
+          <app-jalali-datepicker
+            [formControlName]="field.code"
+            [class.is-invalid]="hasError(field.code)"
+            [placeholder]="field.title">
+          </app-jalali-datepicker>
+          -->
+          
+          <!-- مثال با input ساده (برای تست - باید با کامپوننت تاریخ شمسی جایگزین شود): -->
+          <input
+            [id]="field.code"
+            [formControlName]="field.code"
+            type="text"
+            class="form-control"
+            [class.is-invalid]="hasError(field.code)"
+            [placeholder]="field.title"
+            [readonly]="field.enable === false"
+            placeholder="مثال: 1403/09/15 14:30:00">
+        </div>
+        
+        <!-- برای فیلدهای غیر تاریخ -->
+        <input
+          *ngIf="!isDateField(field)"
+          [id]="field.code"
+          [formControlName]="field.code"
+          [type]="getInputType(field.code)"
+          class="form-control"
+          [class.is-invalid]="hasError(field.code)"
+          [placeholder]="field.title"
+          [readonly]="field.enable === false">
+        
+        <!-- نمایش پیام خطا -->
+        <div 
+          *ngIf="hasError(field.code)" 
+          class="error-message">
+          {{ getErrorMessage(field.code) }}
+        </div>
+        
+        <!-- نمایش اطلاعات اضافی (اختیاری) -->
+        <small 
+          *ngIf="field.regex" 
+          class="form-text text-muted">
+          الگو: {{ field.regex }}
+        </small>
+      </div>
+    </div>
+
+    <!-- دکمه‌های فرم -->
+    <div class="form-actions">
+      <button 
+        type="submit" 
+        class="btn btn-primary"
+        [disabled]="headerForm.invalid">
+        ثبت
+      </button>
+      <button 
+        type="button" 
+        class="btn btn-secondary"
+        (click)="resetForm()">
+        پاک کردن
+      </button>
+    </div>
+
+  </form>
+</div>
+

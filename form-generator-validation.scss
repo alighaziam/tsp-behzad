@@ -1,0 +1,30 @@
+// استایل برای پیام‌های خطا در فرم جنریتور
+// المنت‌های <small class="validation">
+
+.validation {
+  font-size: 0.7rem !important;
+  color: #dc3545;
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+
+  // اگر از کلاس‌های دیگر هم استفاده می‌کنید
+  &.ng-star-inserted {
+    font-size: 0.7rem !important;
+  }
+}
+
+// برای حالت‌های مختلف
+small.validation {
+  font-size: 0.7rem !important;
+}
+
+// اگر در یک container خاص قرار دارد
+.form-group,
+.form-field,
+.field-wrapper {
+  .validation {
+    font-size: 0.7rem !important;
+  }
+}
+

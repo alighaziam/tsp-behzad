@@ -1,0 +1,128 @@
+# Maven build outputs (all modules)
+# Ignore all target directories recursively in all modules
+**/target
+target/
+/target/**
+**/target/
+*/target/
+**/*/target/
+**/target/**
+
+# Compiled class files
+*.class
+.class
+.class/
+**/.class/
+.classes/
+**/.classes/
+
+# Logs
+logs/
+*.log
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+
+# IntelliJ / Eclipse / VSCode
+.idea
+.mvn
+/.mvn
+/.mvn/**
+**/.mvn/
+**/.idea/
+/.idea/**
+/.idea/shelf/**
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+out/
+**/out/
+
+# Node / Frontend (trusted-taxpayers-ui)
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+.angular/
+**/.angular/
+.eslintcache
+.cache/
+**/.cache/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# Local JARs (SDKs or binaries not meant for VCS)
+java/*.jar
+java/*-sources.jar
+java/*-javadoc.jar
+java/*-jar-with-dependencies.jar
+
+# Build outputs
+build/
+out/
+
+# Compiled artifacts
+*.class
+*.jar
+!java/content-0.0.56.jar
+!java/transfer-0.0.56.jar
+!java/utils-0.0.56.jar
+*.war
+*.ear
+
+# Maven / Gradle
+.mvn/wrapper/maven-wrapper.jar
+.mvn/local-repo/
+.gradle/
+
+# IDE files
+/.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+*.launch
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+jacoco.exec
+*.lcov
+
+# Package managers
+/node_modules/
+/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Angular CLI
+.angular/
+
+# Misc caches
+.cache/

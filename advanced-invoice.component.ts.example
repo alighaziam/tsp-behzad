@@ -1,0 +1,387 @@
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { FormBuilder, FormGroup, FormControl, Validators, AbstractControl } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+// برای تبدیل تاریخ شمسی به میلادی - اگر از jalali-moment استفاده می‌کنید:
+// import * as moment from 'jalali-moment';
+// یا اگر از persian-datepicker استفاده می‌کنید:
+// import { PersianDateService } from 'your-date-service';
+
+interface TemplateField {
+  id: string;
+  code: string;
+  title: string;
+  requirementType: 'REQUIRED' | 'OPTIONAL' | 'CONDITIONALLY_REQUIRED' | 'IGNORE';
+  enable: boolean;
+  regex?: string;
+  errorMessage?: string;
+}
+
+interface TemplateFieldsResponse {
+  fields: TemplateField[];
+  templateTypes: any[];
+}
+
+@Component({
+  selector: 'app-advanced-invoice',
+  templateUrl: './advanced-invoice.component.html',
+  styleUrls: ['./advanced-invoice.component.css']
+})
+export class AdvancedInvoiceComponent implements OnInit, OnDestroy {
+  headerForm: FormGroup;
+  sortedHeaderFields: TemplateField[] = [];
+  private destroy$ = new Subject<void>();
+  private apiBaseUrl = 'http://localhost:8080/trusted-taxpayers-rs-1.0/api';
+
+  constructor(
+    private fb: FormBuilder,
+    private http: HttpClient
+  ) {
+    this.headerForm = this.fb.group({});
+  }
+
+  ngOnInit(): void {
+    // Initialize form
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * انتخاب الگو و بارگذاری فیلدهای مربوطه
+   */
+  onPatternSelect(patternCode: string): void {
+    if (!patternCode || patternCode.trim() === '') {
+      console.warn('Pattern code is empty');
+      return;
+    }
+
+    // Reset فرم قبلی
+    this.resetForm();
+
+    // فراخوانی سرویس جدید
+    const url = `${this.apiBaseUrl}/template-fields/template/code/${patternCode}`;
+    
+    this.http.get<TemplateFieldsResponse>(url)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response && response.fields && response.fields.length > 0) {
+            this.buildFormFromFields(response.fields);
+          } else {
+            console.warn('No fields found in response');
+          }
+        },
+        error: (error) => {
+          console.error('Error loading template fields:', error);
+          // در صورت خطا، می‌توانید یک پیام خطا به کاربر نمایش دهید
+        }
+      });
+  }
+
+  /**
+   * ساخت فرم از فیلدهای دریافتی
+   */
+  private buildFormFromFields(fields: TemplateField[]): void {
+    // فیلتر کردن فیلدهای فعال و غیر IGNORE
+    const activeFields = fields.filter(field => 
+      field.enable !== false && 
+      field.requirementType !== 'IGNORE'
+    );
+
+    // حذف لفظ "(میلادی)" از title فیلدهای تاریخ
+    activeFields.forEach(field => {
+      if (this.isDateField(field)) {
+        field.title = field.title.replace(/\s*\(میلادی\)\s*/g, '');
+      }
+    });
+
+    // مرتب‌سازی فیلدها بر اساس title (یا هر ترتیب دیگری که نیاز دارید)
+    this.sortedHeaderFields = activeFields.sort((a, b) => 
+      a.title.localeCompare(b.title, 'fa')
+    );
+
+    // ساخت FormControls برای هر فیلد
+    const formControls: { [key: string]: AbstractControl } = {};
+
+    this.sortedHeaderFields.forEach(field => {
+      const validators = this.buildValidators(field);
+      formControls[field.code] = this.fb.control('', validators);
+    });
+
+    // اضافه کردن FormControls به فرم
+    Object.keys(formControls).forEach(key => {
+      this.headerForm.addControl(key, formControls[key]);
+    });
+  }
+
+  /**
+   * بررسی اینکه آیا فیلد یک فیلد تاریخ است
+   */
+  private isDateField(field: TemplateField): boolean {
+    const title = field.title.toLowerCase();
+    const code = field.code.toLowerCase();
+    
+    return (title.includes('تاریخ و زمان صدور صورتحساب') || 
+            title.includes('تاریخ و زمان ایجاد صورتحساب') ||
+            code.includes('inv_issue_dt') ||
+            code.includes('inv_create_dt'));
+  }
+
+  /**
+   * ساخت Validators بر اساس requirementType و regex
+   */
+  private buildValidators(field: TemplateField): any[] {
+    const validators: any[] = [];
+
+    // اضافه کردن required validator
+    if (field.requirementType === 'REQUIRED' || 
+        field.requirementType === 'CONDITIONALLY_REQUIRED') {
+      validators.push(Validators.required);
+    }
+
+    // اضافه کردن pattern validator
+    if (field.regex && field.regex.trim() !== '') {
+      try {
+        const regexPattern = new RegExp(field.regex);
+        validators.push(Validators.pattern(regexPattern));
+      } catch (error) {
+        console.warn(`Invalid regex pattern for field ${field.code}: ${field.regex}`, error);
+      }
+    }
+
+    return validators;
+  }
+
+  /**
+   * Reset کردن فرم
+   */
+  private resetForm(): void {
+    // حذف تمام FormControls موجود
+    Object.keys(this.headerForm.controls).forEach(key => {
+      this.headerForm.removeControl(key);
+    });
+
+    // Reset کردن آرایه فیلدها
+    this.sortedHeaderFields = [];
+
+    // Reset کردن فرم
+    this.headerForm.reset();
+  }
+
+  /**
+   * دریافت پیام خطا برای یک فیلد
+   */
+  getErrorMessage(fieldCode: string): string {
+    const control = this.headerForm.get(fieldCode);
+    if (!control || !control.errors || !control.touched) {
+      return '';
+    }
+
+    const field = this.sortedHeaderFields.find(f => f.code === fieldCode);
+    
+    // اگر errorMessage از API موجود باشد، از آن استفاده کن
+    if (field?.errorMessage) {
+      if (control.errors['required']) {
+        return field.errorMessage;
+      }
+      if (control.errors['pattern']) {
+        return field.errorMessage;
+      }
+    }
+
+    // Fallback به پیام‌های پیش‌فرض
+    if (control.errors['required']) {
+      return 'این فیلد الزامی است';
+    }
+    if (control.errors['pattern']) {
+      return field?.errorMessage || 'فرمت ورودی نامعتبر است';
+    }
+
+    return '';
+  }
+
+  /**
+   * دریافت نوع input بر اساس کد فیلد (اختیاری - برای بهبود UX)
+   */
+  getInputType(fieldCode: string): string {
+    const code = fieldCode.toLowerCase();
+    
+    if (code.includes('date') || code.includes('dt')) {
+      return 'datetime-local';
+    }
+    if (code.includes('amount') || code.includes('amnt') || code.includes('price') || code.includes('fee')) {
+      return 'number';
+    }
+    if (code.includes('email')) {
+      return 'email';
+    }
+    
+    return 'text';
+  }
+
+  /**
+   * Submit فرم
+   */
+  onSubmit(): void {
+    if (this.headerForm.valid) {
+      // تبدیل تاریخ‌های شمسی به میلادی قبل از ارسال
+      const formValue = this.convertDatesToGregorian(this.headerForm.value);
+      console.log('Form submitted:', formValue);
+      // ارسال داده‌ها به سرور
+    } else {
+      // Mark all fields as touched to show errors
+      Object.keys(this.headerForm.controls).forEach(key => {
+        this.headerForm.get(key)?.markAsTouched();
+      });
+    }
+  }
+
+  /**
+   * تبدیل تاریخ‌های شمسی به میلادی برای ارسال به سرویس
+   */
+  private convertDatesToGregorian(formValue: any): any {
+    const convertedValue = { ...formValue };
+
+    this.sortedHeaderFields.forEach(field => {
+      if (this.isDateField(field) && convertedValue[field.code]) {
+        const jalaliDate = convertedValue[field.code];
+        // تبدیل تاریخ شمسی به میلادی
+        const gregorianDate = this.convertJalaliToGregorian(jalaliDate);
+        convertedValue[field.code] = gregorianDate;
+      }
+    });
+
+    return convertedValue;
+  }
+
+  /**
+   * تبدیل تاریخ شمسی به میلادی
+   * این متد باید بر اساس کتابخانه تاریخ شمسی که استفاده می‌کنید پیاده‌سازی شود
+   * 
+   * مثال با jalali-moment:
+   * return moment(jalaliDate, 'jYYYY/jMM/jDD HH:mm:ss').format('YYYYMMDDHHmmss');
+   * 
+   * مثال با persian-datepicker:
+   * const date = new PersianDate(jalaliDate);
+   * return date.toGregorian().getTime();
+   * 
+   * فرمت مورد نیاز: 13 رقم عددی (YYYYMMDDHHmmss)
+   */
+  private convertJalaliToGregorian(jalaliDate: string): string {
+    // اگر از jalali-moment استفاده می‌کنید:
+    // import * as moment from 'jalali-moment';
+    // return moment(jalaliDate, 'jYYYY/jMM/jDD HH:mm:ss').format('YYYYMMDDHHmmss');
+    
+    // اگر از persian-datepicker استفاده می‌کنید:
+    // const persianDate = new PersianDate(jalaliDate);
+    // const gregorian = persianDate.toGregorian();
+    // const year = gregorian.getFullYear();
+    // const month = String(gregorian.getMonth() + 1).padStart(2, '0');
+    // const day = String(gregorian.getDate()).padStart(2, '0');
+    // const hours = String(gregorian.getHours()).padStart(2, '0');
+    // const minutes = String(gregorian.getMinutes()).padStart(2, '0');
+    // const seconds = String(gregorian.getSeconds()).padStart(2, '0');
+    // return `${year}${month}${day}${hours}${minutes}${seconds}`;
+    
+    // پیاده‌سازی ساده بدون کتابخانه (نیاز به تست دارد):
+    try {
+      const parts = jalaliDate.split(/[\s\/:-]/);
+      if (parts.length >= 3) {
+        const jalaliYear = parseInt(parts[0], 10);
+        const jalaliMonth = parseInt(parts[1], 10);
+        const jalaliDay = parseInt(parts[2], 10);
+        const hours = parts.length > 3 ? parseInt(parts[3], 10) || 0 : 0;
+        const minutes = parts.length > 4 ? parseInt(parts[4], 10) || 0 : 0;
+        const seconds = parts.length > 5 ? parseInt(parts[5], 10) || 0 : 0;
+        
+        // تبدیل شمسی به میلادی (الگوریتم ساده - برای دقت بیشتر از کتابخانه استفاده کنید)
+        const gregorian = this.jalaliToGregorian(jalaliYear, jalaliMonth, jalaliDay);
+        
+        const year = String(gregorian.year).padStart(4, '0');
+        const month = String(gregorian.month).padStart(2, '0');
+        const day = String(gregorian.day).padStart(2, '0');
+        const h = String(hours).padStart(2, '0');
+        const m = String(minutes).padStart(2, '0');
+        const s = String(seconds).padStart(2, '0');
+        
+        return `${year}${month}${day}${h}${m}${s}`;
+      }
+    } catch (error) {
+      console.error('Error converting date:', error);
+    }
+    
+    return jalaliDate; // در صورت خطا، مقدار اصلی را برگردان
+  }
+
+  /**
+   * تبدیل تاریخ شمسی به میلادی (الگوریتم ساده)
+   * برای دقت بیشتر، از کتابخانه‌های تخصصی استفاده کنید
+   */
+  private jalaliToGregorian(jy: number, jm: number, jd: number): { year: number; month: number; day: number } {
+    const gy = (jy <= 979) ? 621 : 1600;
+    let days = (365 * jy) + ((Math.floor(jy / 33)) * 8) + Math.floor(((jy % 33) + 3) / 4) + 78 + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+    gy += 400 * Math.floor(days / 146097);
+    days %= 146097;
+    if (days > 36524) {
+      gy += 100 * Math.floor(--days / 36524);
+      days %= 36524;
+      if (days >= 365) days++;
+    }
+    gy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    if (days > 365) {
+      gy += Math.floor((days - 1) / 365);
+      days = (days - 1) % 365;
+    }
+    const gd = days + 1;
+    const sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm = 0;
+    while (gm < 13 && gd > sal_a[gm]) {
+      gd -= sal_a[gm];
+      gm++;
+    }
+    return { year: gy, month: gm, day: gd };
+  }
+
+  /**
+   * بررسی اینکه آیا فیلد دارای خطا است
+   */
+  hasError(fieldCode: string): boolean {
+    const control = this.headerForm.get(fieldCode);
+    return !!(control && control.invalid && (control.dirty || control.touched));
+  }
+
+  /**
+   * بررسی اینکه آیا فیلد required است
+   */
+  isRequired(fieldCode: string): boolean {
+    const field = this.sortedHeaderFields.find(f => f.code === fieldCode);
+    return field?.requirementType === 'REQUIRED' || 
+           field?.requirementType === 'CONDITIONALLY_REQUIRED';
+  }
+
+  /**
+   * بررسی اینکه آیا فیلد یک فیلد تاریخ است (برای استفاده در HTML)
+   */
+  isDateField(field: TemplateField): boolean {
+    return this.isDateFieldInternal(field);
+  }
+
+  /**
+   * متد داخلی برای بررسی فیلد تاریخ
+   */
+  private isDateFieldInternal(field: TemplateField): boolean {
+    const title = field.title.toLowerCase();
+    const code = field.code.toLowerCase();
+    
+    return (title.includes('تاریخ و زمان صدور صورتحساب') || 
+            title.includes('تاریخ و زمان ایجاد صورتحساب') ||
+            code.includes('inv_issue_dt') ||
+            code.includes('inv_create_dt'));
+  }
+}
+

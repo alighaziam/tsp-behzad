@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>ir.tax</groupId>
+    <artifactId>trusted-taxpayers</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>trusted-taxpayers-parent</module>
+        <module>trusted-taxpayers-core</module>
+        <module>trusted-taxpayers-beans</module>
+        <module>trusted-taxpayers-model</module>
+        <module>trusted-taxpayers-biz</module>
+        <module>trusted-taxpayers-rs</module>
+    </modules>
+</project>
+

@@ -1,0 +1,158 @@
+{
+	"info": {
+		"name": "TaxpayerTaxProduct API",
+		"description": "Collection for testing TaxpayerTaxProduct API endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get Tax Products by Taxpayer ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/taxpayer-tax-products/taxpayer/{{taxpayerId}}/tax-products",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"taxpayer-tax-products",
+						"taxpayer",
+						"{{taxpayerId}}",
+						"tax-products"
+					]
+				},
+				"description": "دریافت لیست تمام محصولات مالیاتی مرتبط با یک مودی مالیاتی"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Relation",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"taxpayerId\": \"{{taxpayerId}}\",\n  \"taxProductId\": \"{{taxProductId}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/taxpayer-tax-products",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"taxpayer-tax-products"
+					]
+				},
+				"description": "ایجاد یک رابطه جدید بین مودی مالیاتی و محصول مالیاتی"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Relation",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/taxpayer-tax-products/taxpayer/{{taxpayerId}}/tax-product/{{taxProductId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"taxpayer-tax-products",
+						"taxpayer",
+						"{{taxpayerId}}",
+						"tax-product",
+						"{{taxProductId}}"
+					]
+				},
+				"description": "حذف رابطه بین مودی مالیاتی و محصول مالیاتی"
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Relations",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/taxpayer-tax-products",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"taxpayer-tax-products"
+					]
+				},
+				"description": "دریافت لیست تمام روابط بین مودیان مالیاتی و محصولات مالیاتی"
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/trusted-taxpayers-rs-1.0",
+			"type": "string"
+		},
+		{
+			"key": "taxpayerId",
+			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string"
+		},
+		{
+			"key": "taxProductId",
+			"value": "660e8400-e29b-41d4-a716-446655440001",
+			"type": "string"
+		}
+	]
+}
+
+
+
+
