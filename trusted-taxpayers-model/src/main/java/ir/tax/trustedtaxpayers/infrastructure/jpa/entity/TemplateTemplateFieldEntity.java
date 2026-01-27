@@ -1,5 +1,6 @@
 package ir.tax.trustedtaxpayers.infrastructure.jpa.entity;
 
+import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
 import ir.tax.trustedtaxpayers.enums.FieldRequirementType;
 import ir.tax.trustedtaxpayers.enums.FieldSection;
 import jakarta.persistence.*;
@@ -18,10 +19,12 @@ import java.util.UUID;
 public class TemplateTemplateFieldEntity {
 
     @Id
+    @Convert(converter = RawUuidConverter.class)
     @Column(name = "TEMPLATE_ID", columnDefinition = "RAW(16)")
     private UUID templateId;
 
     @Id
+    @Convert(converter = RawUuidConverter.class)
     @Column(name = "TEMPLATE_FIELD_ID", columnDefinition = "RAW(16)")
     private UUID templateFieldId;
 

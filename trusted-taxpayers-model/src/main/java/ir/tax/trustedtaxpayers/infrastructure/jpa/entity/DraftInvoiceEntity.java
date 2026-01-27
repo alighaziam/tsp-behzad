@@ -1,7 +1,9 @@
 package ir.tax.trustedtaxpayers.infrastructure.jpa.entity;
 
 import ir.tax.trustedtaxpayers.core.entity.BaseEntity;
+import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -15,7 +17,8 @@ import java.util.UUID;
 @Data
 public class DraftInvoiceEntity extends BaseEntity {
 
-    @Column(name = "OWNER_USER_ID", length = 36)
+    @Convert(converter = RawUuidConverter.class)
+    @Column(name = "OWNER_USER_ID", columnDefinition = "RAW(16)")
     private UUID ownerUserId;
 
     @Column(name = "SOURCE", length = 32, nullable = false)

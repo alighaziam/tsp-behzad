@@ -11,7 +11,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.BatchSize;
-
+import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
+import jakarta.persistence.Convert;
 import java.util.UUID;
 
 
@@ -26,6 +27,8 @@ import java.util.UUID;
 public class BaseInfoEntity extends BaseEntity {
 
     @Id
+    @Convert(converter = RawUuidConverter.class)
+    @Column(name = "ID", nullable = false, updatable = false, columnDefinition = "RAW(16)")
     private UUID id;
 
     @Column(name = "NAME", nullable = false, length = 200)
