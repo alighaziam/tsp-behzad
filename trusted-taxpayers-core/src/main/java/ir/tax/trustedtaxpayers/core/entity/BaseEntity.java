@@ -12,7 +12,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
+import org.hibernate.annotations.JdbcTypeCode;
 import java.io.Serializable;
 import java.sql.Types;
 import java.time.OffsetDateTime;
@@ -45,6 +45,7 @@ public abstract class BaseEntity implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
+    @JdbcTypeCode(Types.BINARY)
 	@Convert(converter = RawUuidConverter.class)
 	@Column(name = "ID", nullable = false, updatable = false, columnDefinition = "RAW(16)")
 	private UUID id;
