@@ -35,8 +35,8 @@ public class MobileCompatInvoicesController {
 	}
 
 	private static boolean unauthorized(String auth) {
-		return auth == null || !auth.equals("Bearer demo-token");
-	}
+        return !MobileCompatSecurity.isAuthenticated();
+    }
 
 	private Map<String, Object> toMobileSummary(ElectronicInvoiceHeaderEntity h) {
 		String sts = systemService.findByHeaderId(h.getId()).map(sys -> sys.getSts()).orElse(null);
