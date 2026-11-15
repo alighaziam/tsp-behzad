@@ -160,7 +160,8 @@ public class TokenConfig {
          */
         @SuppressWarnings({"unchecked", "rawtypes"})
         private void initializeToken() {
-            if (issuerUri == null || issuerUri.isBlank() || clientId == null || clientId.isBlank()\n                    || clientSecret == null || clientSecret.isBlank() || restTemplate == null) {
+            if (issuerUri == null || issuerUri.isBlank() || clientId == null || clientId.isBlank()
+                    || clientSecret == null || clientSecret.isBlank() || restTemplate == null) {
                 return; // Empty token configuration
             }
             
