@@ -30,22 +30,22 @@ import java.util.Map;
 @Configuration
 public class TokenConfig {
 
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}")
     private String issuerUri;
 
-    @Value("${security.oauth2.client.client-id}")
+    @Value("${spring.security.oauth2.client.registration.tsp-client.client-id:}")
     private String clientId;
 
-    @Value("${security.oauth2.client.client-secret}")
+    @Value("${spring.security.oauth2.client.registration.tsp-client.client-secret:}")
     private String clientSecret;
 
-    @Value("${security.oauth2.client.username:}")
+    @Value("${spring.security.oauth2.client.registration.tsp-client.username:}")
     private String username;
 
-    @Value("${security.oauth2.client.password:}")
+    @Value("${spring.security.oauth2.client.registration.tsp-client.password:}")
     private String password;
 
-    @Value("${security.oauth2.client.scope:openid}")
+    @Value("${spring.security.oauth2.client.registration.tsp-client.scope:openid}")
     private String scope;
 
     /**
@@ -160,7 +160,7 @@ public class TokenConfig {
          */
         @SuppressWarnings({"unchecked", "rawtypes"})
         private void initializeToken() {
-            if (issuerUri == null || restTemplate == null) {
+            if (issuerUri == null || issuerUri.isBlank() || clientId == null || clientId.isBlank()\n                    || clientSecret == null || clientSecret.isBlank() || restTemplate == null) {
                 return; // Empty token configuration
             }
             
