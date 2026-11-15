@@ -43,7 +43,7 @@ public class TemplateRuleEntity extends BaseEntity {
     private String active;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TEMPLATE_CODE", insertable = false, updatable = false)
+    @JoinColumn(name = "TEMPLATE_CODE", referencedColumnName = "CODE", insertable = false, updatable = false)
     private TemplateEntity template;
 }
 
