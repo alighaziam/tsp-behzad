@@ -15,7 +15,7 @@ import java.util.Locale;
 /**
  * کلاس پایه برای تمام Manager Implementation ها
  * مشابه GenericImpl در samt-git
- * 
+ *
  * Base class for all Manager Implementations
  * Similar to GenericImpl in samt-git
  */
@@ -32,13 +32,13 @@ public abstract class GenericImpl implements GenericBiz {
     @Qualifier("platformToken")
     protected TokenConfig.BackendToken platformToken;
 
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}")
     protected String issuerUri;
 
-    @Value("${security.oauth2.client.client-id}")
+    @Value("${spring.security.oauth2.client.registration.tsp-client.client-id:}")
     protected String clientId;
 
-    @Value("${security.oauth2.client.client-secret}")
+    @Value("${spring.security.oauth2.client.registration.tsp-client.client-secret:}")
     protected String clientSecret;
 
     @Autowired(required = false)
@@ -112,19 +112,19 @@ public abstract class GenericImpl implements GenericBiz {
         if (token == null || token.getToken() == null) {
             return null;
         }
-        
+
         // ابتدا از claim "sub" استفاده کن
         Object userId = token.getToken().getClaims().get("sub");
         if (userId != null) {
             return userId.toString();
         }
-        
+
         // اگر نبود از "user_id" استفاده کن
         userId = token.getToken().getClaims().get("user_id");
         if (userId != null) {
             return userId.toString();
         }
-        
+
         return token.getName();
     }
 
@@ -145,11 +145,9 @@ public abstract class GenericImpl implements GenericBiz {
         if (token == null || token.getAuthorities() == null) {
             return java.util.Collections.emptyList();
         }
-        
+
         return token.getAuthorities().stream()
                 .map(auth -> auth.getAuthority())
                 .collect(java.util.stream.Collectors.toList());
     }
 }
-
-
