@@ -28,8 +28,8 @@ public class MobileCompatServiceUsageController {
 	private final AuditLogRepository auditLogRepository;
 
 	private static boolean unauthorized(String auth) {
-		return auth == null || !auth.equals("Bearer demo-token");
-	}
+        return !MobileCompatSecurity.isAuthenticated();
+    }
 
 	@GetMapping("/summary")
 	@Operation(summary = "Summary counts for access/usage")

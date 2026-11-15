@@ -185,7 +185,7 @@ public class ElectronicInvoiceHeaderEntity extends BaseEntity {
     private Long asd; // Unix Time
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TEMPLATE_CODE", insertable = false, updatable = false)
+    @JoinColumn(name = "TEMPLATE_CODE", referencedColumnName = "CODE", insertable = false, updatable = false)
     private TemplateEntity template;
 
     // Relations to Taxpayers (Seller and Buyer)
