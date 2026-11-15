@@ -3,9 +3,9 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:oracle:thin:@localhost:1521:XE
-    username: ham_tsp
-    password: ham_tsp
+    url: ${APP_DB_URL:jdbc:oracle:thin:@localhost:1521:XE}
+    username: ${APP_DB_USER:ham_tsp}
+    password: ${APP_DB_PASSWORD:ham_tsp}
     driver-class-name: oracle.jdbc.OracleDriver
     hikari:
       # Don't fail fast if database is not available (wait indefinitely)
@@ -18,26 +18,20 @@ spring:
       # Allow lazy initialization
       auto-commit: false
   flyway:
-    # Temporarily disable validation to allow repair of failed migrations
-    # After fixing the schema history, re-enable validation
-    validate-on-migrate: false
-    # Allow Flyway to repair failed migrations automatically
+    validate-on-migrate: true
     clean-disabled: true
   jpa:
     hibernate:
-      # Temporarily set to none to allow Flyway to run migrations first
-      # After migrations are applied, change back to validate
-      ddl-auto: none
+      ddl-auto: validate
       # Use custom naming strategy for Oracle to preserve uppercase table names
       naming:
         physical-strategy: ir.tax.trustedtaxpayers.application.config.OracleNamingStrategy
     properties:
       hibernate:
         dialect: org.hibernate.dialect.OracleDialect
-        # Enable SQL logging to debug table name issues
-        show_sql: true
-        format_sql: true
-        use_sql_comments: true
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
         # Don't validate schema on startup if database is not available
         jdbc:
           time_zone: UTC
@@ -45,8 +39,6 @@ spring:
         temp:
           use_jdbc_metadata_defaults: false
     open-in-view: false
-    # Don't initialize JPA eagerly
-    show-sql: true
 
 server:
   port: 8080
