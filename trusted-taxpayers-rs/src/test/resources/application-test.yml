@@ -1,4 +1,17 @@
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ""
+          jwk-set-uri: http://localhost:0/test-jwks
+      client:
+        registration:
+          tsp-client:
+            client-id: ""
+            client-secret: ""
+            scope: openid
+
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
