@@ -1,7 +1,9 @@
 package ir.tax.trustedtaxpayers.interfaces.rest;
 
+import ir.tax.trustedtaxpayers.application.security.JwtService;
 import ir.tax.trustedtaxpayers.application.service.SettingService;
 import ir.tax.trustedtaxpayers.application.service.TaxpayerService;
+import ir.tax.trustedtaxpayers.application.service.UserAuthenticationService;
 import ir.tax.trustedtaxpayers.enums.SettingGroupType;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.SettingEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerEntity;
@@ -10,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,59 +28,82 @@ import java.util.Optional;
 @Validated
 public class MobileCompatController {
 
+    private static final long ACCESS_TOKEN_TTL_MS = 3_600_000L;
+
     private final TaxpayerService taxpayerService;
     private final SettingService settingService;
+    private final UserAuthenticationService authenticationService;
+    private final JwtService jwtService;
 
-    public MobileCompatController(TaxpayerService taxpayerService, SettingService settingService) {
+    public MobileCompatController(TaxpayerService taxpayerService,
+                                  SettingService settingService,
+                                  UserAuthenticationService authenticationService,
+                                  JwtService jwtService) {
         this.taxpayerService = taxpayerService;
         this.settingService = settingService;
+        this.authenticationService = authenticationService;
+        this.jwtService = jwtService;
     }
 
-    // Auth (demo parity)
+    /**
+     * Compatibility login delegates to the same credential verification and
+     * token issuer used by the canonical authentication API.
+     */
     @PostMapping("/auth/login")
-    public Map<String, Object> login(@RequestBody Map<String, Object> body) {
-        String username = (String) body.get("username");
-        String password = (String) body.get("password");
-        if (username == null || password == null) {
-            return Map.of("error", "username and password are required");
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> body) {
+        Object usernameValue = body.get("username");
+        Object passwordValue = body.get("password");
+        if (!(usernameValue instanceof String username) || username.isBlank()
+                || !(passwordValue instanceof String password) || password.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "username and password are required"));
         }
-        Map<String, Object> user = new HashMap<>();
-        user.put("username", username);
-        return Map.of("token", "demo-token", "user", user);
+
+        var result = authenticationService.authenticate(username, password);
+        String token = jwtService.generate(result.getUsername(), ACCESS_TOKEN_TTL_MS,
+                Map.of("roles", result.getRoles()));
+        return ResponseEntity.ok(Map.of(
+                "token", token,
+                "access_token", token,
+                "token_type", "Bearer",
+                "user", Map.of("username", result.getUsername())
+        ));
     }
 
     @GetMapping("/auth/me")
-    public ResponseEntity<Map<String, Object>> me(@RequestHeader(value = "Authorization", required = false) String auth) {
-        if (auth == null || !auth.equals("Bearer demo-token")) {
+    public ResponseEntity<Map<String, Object>> me(
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        if (!MobileCompatSecurity.isAuthenticated()) {
             return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
         }
-        return ResponseEntity.ok(Map.of("username", "demo", "roles", List.of("ROLE_ADMIN")));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return ResponseEntity.ok(Map.of(
+                "username", authentication.getName(),
+                "roles", authentication.getAuthorities().stream()
+                        .map(authority -> authority.getAuthority()).toList()
+        ));
     }
 
-    // Settings list (GET) similar to mobile `/api/settings`
     @GetMapping("/api/settings")
-    public ResponseEntity<List<Map<String, Object>>> listSettings(@RequestHeader(value = "Authorization", required = false) String auth) {
-        if (auth == null || !auth.equals("Bearer demo-token")) {
+    public ResponseEntity<List<Map<String, Object>>> listSettings(
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        if (!MobileCompatSecurity.isAuthenticated()) {
             return ResponseEntity.status(401).build();
         }
         List<SettingEntity> settings = settingService.findAll();
-        return ResponseEntity.ok(
-                settings.stream().map(this::toSettingDto).toList()
-        );
+        return ResponseEntity.ok(settings.stream().map(this::toSettingDto).toList());
     }
 
-    // Create/Upsert setting (POST)
     @PostMapping("/api/settings")
-    public ResponseEntity<Map<String, Object>> upsertSetting(@RequestHeader(value = "Authorization", required = false) String auth,
-                                                             @RequestBody Map<String, Object> body) {
-        if (auth == null || !auth.equals("Bearer demo-token")) {
+    public ResponseEntity<Map<String, Object>> upsertSetting(
+            @RequestHeader(value = "Authorization", required = false) String auth,
+            @RequestBody Map<String, Object> body) {
+        if (!MobileCompatSecurity.isAuthenticated()) {
             return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
         }
         Object keyObj = body.get("key");
-        if (!(keyObj instanceof String) || ((String) keyObj).isBlank()) {
+        if (!(keyObj instanceof String key) || key.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "key is required"));
         }
-        String key = (String) keyObj;
         String value = body.get("value") == null ? null : String.valueOf(body.get("value"));
         String groupTypeStr = body.get("group_type") == null ? "GENERAL" : String.valueOf(body.get("group_type"));
         Optional<SettingEntity> existing = settingService.findByKey(key);
@@ -84,9 +111,8 @@ public class MobileCompatController {
         entity.setKey(key);
         entity.setValue(value);
         try {
-            SettingGroupType gt = SettingGroupType.valueOf(groupTypeStr.toUpperCase());
-            entity.setGroupType(gt);
-        } catch (Exception ignored) {
+            entity.setGroupType(SettingGroupType.valueOf(groupTypeStr.toUpperCase()));
+        } catch (IllegalArgumentException ignored) {
             entity.setGroupType(SettingGroupType.GENERAL);
         }
         entity.setUpdatedOn(OffsetDateTime.now());
@@ -99,7 +125,6 @@ public class MobileCompatController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    // Taxpayers list with pagination + q search
     @GetMapping("/api/taxpayers")
     public ResponseEntity<Map<String, Object>> listTaxpayers(
             @RequestHeader(value = "Authorization", required = false) String auth,
@@ -107,9 +132,8 @@ public class MobileCompatController {
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(defaultValue = "DESC") String order,
-            @RequestParam(required = false) String q
-    ) {
-        if (auth == null || !auth.equals("Bearer demo-token")) {
+            @RequestParam(required = false) String q) {
+        if (!MobileCompatSecurity.isAuthenticated()) {
             return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
         }
         int p = Math.max(1, page) - 1;
@@ -148,5 +172,3 @@ public class MobileCompatController {
         return m;
     }
 }
-
-
