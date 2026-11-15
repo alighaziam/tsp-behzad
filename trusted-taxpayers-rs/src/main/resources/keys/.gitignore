@@ -1,5 +1,5 @@
-# Ignore all private key files
-!*.pem
+# Private and deployment keys must be provisioned outside source control.
+*.pem
 *.key
 *.pfx
 *.p12
@@ -7,7 +7,5 @@
 *.cer
 *.crt
 
-# Except the README
-!README.md
+# Keep this policy file tracked.
 !.gitignore
-
