@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import ir.gov.tax.tpis.sdk.content.api.TaxApi;
+import ir.tax.trustedtaxpayers.config.TaxSdkProperties;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,6 +25,9 @@ class MobileCompatSmokeTest {
 
 	@MockBean
 	private TaxApi taxApi;
+
+	@MockBean
+	private TaxSdkProperties taxSdkProperties;
 
 	private static final String TOKEN = "Bearer demo-token";
 
