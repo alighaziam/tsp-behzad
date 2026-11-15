@@ -22,6 +22,9 @@ class MobileCompatSmokeTest {
 	@Autowired
 	private MockMvc mockMvc;
 
+	@MockBean
+	private TaxApi taxApi;
+
 	private static final String TOKEN = "Bearer demo-token";
 
 	@Test
