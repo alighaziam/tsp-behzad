@@ -28,8 +28,8 @@ public class OutboxController {
 	private final OutboxMessageRepository outboxRepository;
 
 	private static boolean unauthorized(String auth) {
-		return auth == null || !auth.equals("Bearer demo-token");
-	}
+        return !MobileCompatSecurity.isAuthenticated();
+    }
 
 	public record EnqueueRequest(
 			@NotBlank String aggregate_type,
