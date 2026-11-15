@@ -30,8 +30,8 @@ public class MobileCompatRolesController {
 	private final AssignRoleUseCase assignRoleUseCase;
 
 	private static boolean unauthorized(String auth) {
-		return auth == null || !auth.equals("Bearer demo-token");
-	}
+        return !MobileCompatSecurity.isAuthenticated();
+    }
 
 	@GetMapping("/roles")
 	@Operation(summary = "List all roles")
