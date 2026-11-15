@@ -43,6 +43,9 @@ spring:
     listener:
       auto-startup: false
 
+db:
+  normalize-raw-uuid-on-startup: false
+
 grpc:
   server:
     port: -1
