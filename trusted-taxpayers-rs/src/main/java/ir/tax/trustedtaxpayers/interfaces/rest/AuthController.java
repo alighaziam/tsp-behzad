@@ -112,24 +112,14 @@ public class AuthController {
     /**
      * باقی‌مانده برای سازگاری عقب‌رو به زودی حذف خواهد شد.
      */
+    /**
+     * Disabled because this unauthenticated compatibility endpoint previously allowed
+     * callers to mint tokens with arbitrary usernames and roles.
+     */
     @Deprecated
     @PostMapping("/token")
-    public ResponseEntity<Map<String, String>> legacyToken(@RequestBody Map<String, Object> req) {
-        String username = Optional.ofNullable(req.get("username"))
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .orElse("user");
-
-        List<String> roles = Optional.ofNullable(req.get("roles"))
-                .filter(List.class::isInstance)
-                .map(list -> ((List<?>) list).stream()
-                        .filter(String.class::isInstance)
-                        .map(String.class::cast)
-                        .toList())
-                .orElse(Collections.singletonList("ROLE_USER"));
-
-        String token = jwtService.generate(username, ACCESS_TOKEN_TTL_MS, Map.of("roles", roles));
-        return ResponseEntity.ok(Map.of("access_token", token, "token_type", "Bearer"));
+    public ResponseEntity<Void> legacyToken() {
+        return ResponseEntity.status(HttpStatus.GONE).build();
     }
 
     private String resolveUsername(HttpServletRequest request, ChangePasswordRequest body) {
