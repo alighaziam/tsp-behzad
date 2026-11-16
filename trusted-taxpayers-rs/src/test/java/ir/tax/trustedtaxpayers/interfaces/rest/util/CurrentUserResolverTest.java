@@ -19,7 +19,7 @@ class CurrentUserResolverTest {
 
     @Test
     void doesNotTrustClientSuppliedXUserHeader() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockMockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-User", "administrator");
 
         assertNull(CurrentUserResolver.resolveUsername(request));
