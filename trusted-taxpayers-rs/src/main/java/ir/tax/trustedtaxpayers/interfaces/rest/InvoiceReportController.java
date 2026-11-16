@@ -222,10 +222,15 @@ public class InvoiceReportController {
         }
         
         var invoice = invoiceOpt.get();
-        // Check if user has access to this invoice's taxpayer
-        UUID sellerTaxpayerId = /*invoice.getSellerTaxpayer() != null ?
-                invoice.getSellerTaxpayer().getId() :*/ null;
-        if (sellerTaxpayerId == null || !accessibleTaxpayers.contains(sellerTaxpayerId)) {
+        // Behzad stores taxpayer references as TINS/TINB strings on the invoice header.
+        Set<String> assignedTaxIds = taxpayerRepository.findAllById(accessibleTaxpayers).stream()
+                .map(TaxpayerEntity::getTaxId)
+                .filter(Objects::nonNull)
+                .map(value -> value.toUpperCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+        String sellerTaxId = invoice.getTins() == null ? "" : invoice.getTins().trim().toUpperCase(Locale.ROOT);
+        String buyerTaxId = invoice.getTinb() == null ? "" : invoice.getTinb().trim().toUpperCase(Locale.ROOT);
+        if (!assignedTaxIds.contains(sellerTaxId) && !assignedTaxIds.contains(buyerTaxId)) {
             return ResponseEntity.status(FORBIDDEN).build();
         }
         
