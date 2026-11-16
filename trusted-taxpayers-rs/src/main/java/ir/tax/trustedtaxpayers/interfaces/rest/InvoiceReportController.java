@@ -33,7 +33,6 @@ import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static ir.tax.trustedtaxpayers.interfaces.rest.util.CurrentUserResolver.resolveUsername;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
@@ -44,6 +43,7 @@ public class InvoiceReportController {
 
     private final InvoiceReportService reportService;
     private final UserRoleService userRoleService;
+    private final CurrentUserTaxpayerResolverService taxpayerAccessResolver;
     private final CurrentUserTaxpayerResolverService taxpayerResolverService;
     private final TaxpayerRepository taxpayerRepository;
     private final InvoiceExportService exportService;
@@ -351,29 +351,6 @@ public class InvoiceReportController {
         return taxpayerNo != null && !taxpayerNo.isBlank()
                 ? taxpayerNo.trim().toUpperCase(Locale.ROOT)
                 : null;
-    }
-
-    private UUID resolveCurrentUserId(HttpServletRequest request) {
-        String username = resolveUsername(request);
-        if (username == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "شناسه کاربر یافت نشد.");
-        }
-        return userRoleService.findUserIdByUsername(username)
-                .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "کاربر معتبر نیست."));
-    }
-
-    /**
-     * بررسی می‌کند که آیا کاربر جاری نقش TAXPAYER دارد یا نه
-     */
-    private boolean isTaxpayerUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return false;
-        }
-        
-        return authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(authority -> authority.equals("TAXPAYER") || authority.equals("ROLE_TAXPAYER"));
     }
 
     private List<ReportTaxpayerDto> buildTaxpayerDtos(Set<UUID> taxpayerIds) {
