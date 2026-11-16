@@ -37,7 +37,7 @@ import java.util.*;
  */
 @RestController
 @RequestMapping({"/api/users", "/api/v1/users"})
-@Tag(name = "User Management", description = "مدیریت کاربران و نقش‌ها\n\nراهنمای سریع:\n- Base: /api/users\n- هدرها: Content-Type: application/json و Authorization: Bearer <JWT>\n- صفحه‌بندی: page از 0، size پیش‌فرض 20، sortBy و asc\n- نمونه‌ها:\n  * ایجاد کاربر: POST /api/users → {username,passwordHash,email} → {id}\n  * نقش‌های کاربر: GET /api/users/{id}/roles\n  * جستجو: POST /api/users/search?page=0&size=20 → [{key:\"username\",operand:\"LIKE\",value:\"test\"}]\n")
+@Tag(name = "User Management", description = "مدیریت کاربران و نقش‌ها\n\nراهنمای سریع:\n- Base: /api/users\n- هدرها: Content-Type: application/json و Authorization: Bearer <JWT>\n- صفحه‌بندی: page از 0، size پیش‌فرض 20، sortBy و asc\n- نمونه‌ها:\n  * ایجاد کاربر: POST /api/users → {username,password,email} → {id}\n  * نقش‌های کاربر: GET /api/users/{id}/roles\n  * جستجو: POST /api/users/search?page=0&size=20 → [{key:\"username\",operand:\"LIKE\",value:\"test\"}]\n")
 @Validated
 @PreAuthorize("hasAuthority('ADMIN')")
 public class UserController {
@@ -106,7 +106,7 @@ public class UserController {
                                     name = "نمونه درخواست",
                                     value = "{\n" +
                                             "  \"username\": \"testuser\",\n" +
-                                            "  \"passwordHash\": \"$2a$10$hashedpassword...\",\n" +
+                                            "  \"password\": \"$2a$10$hashedpassword...\",\n" +
                                             "  \"email\": \"test@example.com\"\n" +
                                             "}"
                             )
@@ -555,12 +555,12 @@ public class UserController {
                                                                schema = @Schema(implementation = SetUserPasswordRequest.class),
                                                                examples = @ExampleObject(
                                                                        name = "نمونه درخواست",
-                                                                       value = "{\n  \"passwordHash\": \"$2a$10$hashedpassword...\" \n}"
+                                                                       value = "{\n  \"password\": \"$2a$10$hashedpassword...\" \n}"
                                                                )
                                                        )
                                                )
                                                @jakarta.validation.Valid @RequestBody SetUserPasswordRequest request) {
-        userRoleService.setPassword(id, request.passwordHash());
+        userRoleService.setPassword(id, request.password());
         return ResponseEntity.ok().build();
     }
 
