@@ -212,7 +212,7 @@ public class InvoiceReportService {
                 Predicate buyerPredicate = cb.upper(header.get("tinb")).in(assignedTaxIds);
                 predicates.add(cb.or(sellerPredicate, buyerPredicate));
             }
-        }/
+        }
 
         if (Objects.nonNull(filter) && (filter.taxpayerNo() != null && !filter.taxpayerNo().isBlank())) {
             String pattern = filter.taxpayerNo().trim().toUpperCase(Locale.ROOT);
