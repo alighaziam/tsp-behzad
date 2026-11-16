@@ -12,6 +12,9 @@ permissions:
 
 jobs:
   verify:
+    env:
+      # Test-only key; never reused by deployments.
+      APP_JWT_SECRET: bG9jYWwtY2ktb25seS1ub3QtZm9yLXByb2R1Y3Rpb24ta2V5IQ==
     name: Java 17 / Maven multi-module verification
     runs-on: ubuntu-latest
     steps:
