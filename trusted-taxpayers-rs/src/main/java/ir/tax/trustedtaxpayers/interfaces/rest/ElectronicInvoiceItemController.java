@@ -6,6 +6,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceIt
 import ir.tax.trustedtaxpayers.core.spec.FilterRequest;
 import ir.tax.trustedtaxpayers.interfaces.dto.ElectronicInvoiceDtos;
 import ir.tax.trustedtaxpayers.interfaces.mapper.ElectronicInvoiceMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/electronic-invoice-items")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Electronic Invoice Items", description = "مدیریت اقلام صورتحساب الکترونیکی\n\nراهنمای سریع:\n- Base: /api/electronic-invoice-items\n- همه: /all | بر اساس Header: /by-header/{headerId} | sstid: /by-sstid/{sstid}\n- جستجوی سفارشی (page): POST /search-custom?page=0&size=10 → [{key,operand,value}]\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class ElectronicInvoiceItemController extends BaseController<ElectronicInvoiceItemEntity, UUID> {
     private final ElectronicInvoiceItemService itemService;
     private final ElectronicInvoiceItemRepository itemRepository;
