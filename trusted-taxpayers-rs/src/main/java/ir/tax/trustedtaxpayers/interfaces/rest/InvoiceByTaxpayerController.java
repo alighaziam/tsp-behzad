@@ -11,6 +11,7 @@ import ir.tax.trustedtaxpayers.application.service.InvoiceExportService;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeaderEntity;
 import ir.tax.trustedtaxpayers.interfaces.dto.ElectronicInvoiceDtos;
 import ir.tax.trustedtaxpayers.interfaces.mapper.ElectronicInvoiceMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/invoices/by-taxpayer")
 @Tag(name = "Invoices by Taxpayer", description = "لود کردن صورتحساب‌ها بر اساس مودی مالیاتی\n\nراهنمای سریع:\n- Base: /api/invoices/by-taxpayer\n- صفحه‌بندی: GET /{taxpayerId}?page=0&size=20&sortBy=createdOn&direction=DESC\n- بر اساس شماره اقتصادی: GET /no/{taxpayerNo} (page)\n- فروشنده/خریدار: GET /{taxpayerId}/as-seller | /as-buyer\n- همه/تعداد: GET /{taxpayerId}/all | /count\n- خروجی: /export/pdf | /export/csv (برای id یا no)\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class InvoiceByTaxpayerController {
     
     private final InvoiceByTaxpayerService invoiceByTaxpayerService;
