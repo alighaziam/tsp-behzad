@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/settings")
+@PreAuthorize("hasAuthority('ADMIN')")
 @Tag(name = "Settings Management", description = "مدیریت تنظیمات سیستم\n\nراهنمای سریع:\n- Base: /api/settings\n- مقدار کلید: GET /key/{key}/value | PUT /key/{key}/value → {value}\n- RateLimit: GET /rate/{path} | PUT /rate\n- CircuitBreaker: GET /cb/{path} | PUT /cb\n- لیست سرویس‌ها: GET /services\n- Snapshot سرویس: GET /service/{classFqn} | PUT /service\n- Form Schema: GET /form-schema\n")
 public class SettingController {
     
