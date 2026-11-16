@@ -44,5 +44,12 @@ taxpayer-system:
   retry:
     max-attempts: 3
     backoff-delay: 1000
-
-
+# Production Tax SDK settings: never inherit sandbox endpoints or sample identities.
+tax:
+  sdk:
+    base-url: ${TAX_SDK_BASE_URL}
+    memory-id: ${TAX_SDK_MEMORY_ID}
+    client-id: ${TAX_SDK_CLIENT_ID}
+    private-key-path: ${TAX_SDK_PRIVATE_KEY_PATH}
+    private-key-password: ${TAX_SDK_PRIVATE_KEY_PASSWORD:}
+    request-timeout-ms: ${TAX_SDK_REQUEST_TIMEOUT_MS:30000}
