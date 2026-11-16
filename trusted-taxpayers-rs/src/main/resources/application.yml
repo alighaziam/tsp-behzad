@@ -94,7 +94,7 @@ spring:
         registration:
           tsp-client:
             client-id: ${OAUTH2_CLIENT_ID:trusted-taxpayers-client}
-            client-secret: ${OAUTH2_CLIENT_SECRET:}
+            client-secret: ${OAUTH2_CLIENT_SECRET}
             scope: openid,profile,email
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
