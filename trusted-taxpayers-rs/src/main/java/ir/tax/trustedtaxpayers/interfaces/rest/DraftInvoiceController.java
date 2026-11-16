@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ import java.util.Map;
 @Tag(name = "Draft Invoices", description = "مدیریت پیش‌نویس‌های صورتحساب")
 @Validated
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ADMIN')")
 public class DraftInvoiceController {
     private final DraftInvoiceService service;
     private final ObjectMapper objectMapper;
