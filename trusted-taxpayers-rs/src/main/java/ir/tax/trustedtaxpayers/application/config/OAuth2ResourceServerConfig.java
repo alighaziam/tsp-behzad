@@ -97,11 +97,16 @@ public class OAuth2ResourceServerConfig {
             // در Production، origins از Environment Variable خوانده می‌شود
             String allowedOrigins = environment.getProperty("cors.allowed-origins", "");
             if (allowedOrigins != null && !allowedOrigins.isBlank()) {
-                List<String> origins = Arrays.asList(allowedOrigins.split(","));
-                configuration.setAllowedOrigins(origins.stream()
+                List<String> origins = Arrays.stream(allowedOrigins.split(","))
                         .map(String::trim)
                         .filter(s -> !s.isEmpty())
-                        .toList());
+                        .toList();
+                if (origins.isEmpty() || origins.contains("*")) {
+                    throw new IllegalStateException(
+                            "cors.allowed-origins must contain at least one explicit origin; wildcards are forbidden in Production"
+                    );
+                }
+                configuration.setAllowedOrigins(origins);
                 log.info("CORS configured for Production with {} allowed origins", origins.size());
             } else {
                 // Fail closed: never start production with a placeholder or wildcard CORS origin.
