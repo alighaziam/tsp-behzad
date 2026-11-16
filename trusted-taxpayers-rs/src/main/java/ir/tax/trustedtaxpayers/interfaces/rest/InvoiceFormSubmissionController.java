@@ -17,6 +17,7 @@ import ir.tax.trustedtaxpayers.interfaces.rest.dto.InvoiceSubmissionRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +38,7 @@ import static ir.tax.trustedtaxpayers.interfaces.rest.util.CurrentUserResolver.r
 @Slf4j
 @Tag(name = "Invoice Form Submission", description = "اعتبارسنجی و ارسال صورت‌حساب بر اساس الگو\n\nراهنمای سریع:\n- Base: /api/invoice-forms\n- اعتبارسنجی: POST /pattern/{patternNumber}/validate\n- ارسال: POST /pattern/{patternNumber}/submit\n- هدرها: Content-Type: application/json و Authorization: Bearer <JWT>\n")
 @Validated
+@PreAuthorize("hasAuthority('ADMIN')")
 public class InvoiceFormSubmissionController {
 
     private final InvoiceFormValidationService invoiceFormValidationService;
