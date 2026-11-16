@@ -15,8 +15,15 @@ import java.util.Map;
 public class JwtService {
     // provide base64 secret via env APP_JWT_SECRET (>=256-bit for HS256)
     private Key key() {
-        String secret = System.getenv().getOrDefault("APP_JWT_SECRET", "bXktdmVyeS1sb25nLXNlY3JldC1mb3ItZGV2LXVzZS1vbmx5LWFhYWFh");
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        String secret = System.getenv("APP_JWT_SECRET");
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("APP_JWT_SECRET must be configured; no default signing secret is allowed");
+        }
+        try {
+            return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("APP_JWT_SECRET must be valid Base64 and contain at least 256 bits", e);
+        }
     }
 
     public String generate(String subject, long ttlMillis, Map<String, Object> claims) {
