@@ -11,6 +11,7 @@ import ir.tax.trustedtaxpayers.application.service.InvoiceExportService;a
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeaderEntity;
 import ir.tax.trustedtaxpayers.interfaces.dto.ElectronicInvoiceDtos;
 import ir.tax.trustedtaxpayers.interfaces.mapper.ElectronicInvoiceMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/invoices/by-buyer-seller")
 @Tag(name = "Invoices by Buyer and Seller", description = "لود کردن صورتحساب‌ها بر اساس خریدار و فروشنده\n\nراهنمای سریع:\n- Base: /api/invoices/by-buyer-seller\n- فروشنده: GET /seller/{sellerTaxpayerId}?page=0&size=20...\n- خریدار: GET /buyer/{buyerTaxpayerId}?page=0&size=20...\n- هر دو: GET /seller/{sellerId}/buyer/{buyerId}?page=0&size=20...\n- نسخه‌های all | count موجود است\n- کش: DELETE /cache/seller/{id} | /cache/buyer/{id} | /cache/all\n- خروجی: مسیرهای export/pdf | export/csv موجود است\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class InvoiceByBuyerAndSellerController {
     
     private final InvoiceByBuyerAndSellerService invoiceByBuyerAndSellerService;
