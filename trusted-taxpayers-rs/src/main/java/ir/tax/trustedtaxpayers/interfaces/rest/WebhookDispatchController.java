@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -20,15 +21,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/mobile-compat/api/webhooks")
+@PreAuthorize("hasAuthority('ADMIN')")
 @RequiredArgsConstructor
 @Tag(name = "Mobile-Compat Webhooks", description = "Dispatch a webhook with simple payload (for testing)")
 public class WebhookDispatchController {
 
 	private final RestTemplate restTemplate = new RestTemplate();
 
-	private static boolean unauthorized(String auth) {
-		return auth == null || !auth.equals("Bearer demo-token");
-	}
 
 	public record DispatchRequest(@NotBlank String url, Map<String, Object> payload, String secret) {}
 
@@ -37,7 +36,6 @@ public class WebhookDispatchController {
 	public ResponseEntity<?> dispatch(
 			@RequestHeader(value = "Authorization", required = false) String auth,
 			@RequestBody DispatchRequest req) {
-		if (unauthorized(auth)) return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON);
 		if (req.secret() != null && !req.secret().isBlank()) {
