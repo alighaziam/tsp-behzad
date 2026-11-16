@@ -14,6 +14,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceHe
 import ir.tax.trustedtaxpayers.core.spec.FilterRequest;
 import ir.tax.trustedtaxpayers.interfaces.dto.ElectronicInvoiceDtos;
 import ir.tax.trustedtaxpayers.interfaces.mapper.ElectronicInvoiceMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/electronic-invoices")
 @Tag(name = "Electronic Invoice Management", description = "مدیریت صورتحساب‌های الکترونیکی مالیاتی\n\nراهنمای سریع:\n- Base: /api/electronic-invoices\n- همه: /all | بر اساس TAX_ID: /by-tax-id/{taxId}\n- فروشنده/خریدار (page): /by-seller/{tins} | /by-buyer/{tinb}\n- قالب و نوع (page): /by-template/{templateCode}/type/{inty}\n- جستجوی سفارشی (page): POST /search-custom?page=0&size=10 → [{key,operand,value}]\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class ElectronicInvoiceHeaderController extends BaseController<ElectronicInvoiceHeaderEntity, UUID> {
     private final ElectronicInvoiceHeaderService headerService;
     private final ElectronicInvoiceHeaderRepository headerRepository;
