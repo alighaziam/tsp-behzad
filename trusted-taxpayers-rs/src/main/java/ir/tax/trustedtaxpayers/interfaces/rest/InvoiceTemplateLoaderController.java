@@ -12,6 +12,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TemplateEntity;
 import ir.tax.trustedtaxpayers.interfaces.dto.ElectronicInvoiceDtos;
 import ir.tax.trustedtaxpayers.interfaces.mapper.ElectronicInvoiceMapper;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -332,6 +333,7 @@ public class InvoiceTemplateLoaderController {
                     )
             }
     )
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/cache/inty/{inty}")
     public ResponseEntity<Void> invalidateCacheByInty(
             @PathVariable
@@ -356,6 +358,7 @@ public class InvoiceTemplateLoaderController {
                     )
             }
     )
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/cache/all")
     public ResponseEntity<Void> invalidateAllCache() {
         templateLoaderService.invalidateAllCache();
