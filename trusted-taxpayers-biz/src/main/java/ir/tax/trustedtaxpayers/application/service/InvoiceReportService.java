@@ -11,6 +11,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceSystem
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceHeaderRepository;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceSystemRepository;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TaxpayerRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.Tuple;
@@ -48,6 +49,7 @@ public class InvoiceReportService {
     private final EntityManager entityManager;
     private final ElectronicInvoiceHeaderRepository headerRepository;
     private final InvoiceExportService invoiceExportService;
+    private final TaxpayerRepository taxpayerRepository;
 
     @Transactional(readOnly = true)
     public Optional<ElectronicInvoiceHeaderEntity> findInvoiceById(UUID headerId) {
@@ -201,9 +203,20 @@ public class InvoiceReportService {
         }
 
         if (Objects.nonNull(filter) && !filter.taxpayerIds().isEmpty()) {
-            Predicate sellerPredicate = seller.get("id").in(filter.taxpayerIds());
-            Predicate buyerPredicate = buyer.get("id").in(filter.taxpayerIds());
-            predicates.add(cb.or(sellerPredicate, buyerPredicate));
+            List<String> assignedTaxIds = taxpayerRepository.findAllById(filter.taxpayerIds()).stream()
+                    .map(TaxpayerEntity::getTaxId)
+                    .filter(Objects::nonNull)
+                    .filter(value -> !value.isBlank())
+                    .toList();
+            if (assignedTaxIds.isEmpty()) {
+                predicates.add(cb.disjunction());
+            } else {
+                Predicate sellerPredicate = cb.upper(header.get("tins")).in(
+                        assignedTaxIds.stream().map(value -> value.toUpperCase(Locale.ROOT)).toList());
+                Predicate buyerPredicate = cb.upper(header.get("tinb")).in(
+                        assignedTaxIds.stream().map(value -> value.toUpperCase(Locale.ROOT)).toList());
+                predicates.add(cb.or(sellerPredicate, buyerPredicate));
+            }
         }*/
 
         if (Objects.nonNull(filter) && (filter.taxpayerNo() != null && !filter.taxpayerNo().isBlank())) {
