@@ -9,6 +9,7 @@ The production profile intentionally requires deployment-specific values. Do not
 | `APP_DB_URL` | Oracle JDBC URL |
 | `APP_DB_USER` / `APP_DB_PASSWORD` | Oracle application account |
 | `OAUTH2_CLIENT_SECRET` | OAuth2 client secret |
+| `APP_JWT_SECRET` | Base64-encoded application JWT signing secret (at least 256 bits) |
 | `OAUTH2_ISSUER_URI` | Identity provider issuer |
 | `OAUTH2_JWK_SET_URI` | Identity provider signing-key endpoint |
 | `TAXPAYER_SYSTEM_URL` | Taxpayer system API base URL |
