@@ -11,6 +11,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.SubscriptionPlanService
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ServiceUsageRepository;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -186,6 +187,7 @@ public class ServiceController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/batch/check-access")
     @Operation(summary = "بررسی دسترسی دسته‌ای به خدمات")
     public ResponseEntity<BatchServiceAccessResponse> batchCheckServiceAccess(
@@ -207,6 +209,7 @@ public class ServiceController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/batch/quota")
     @Operation(summary = "دریافت سهمیه دسته‌ای خدمات")
     public ResponseEntity<BatchServiceQuotaResponse> batchGetServiceQuota(
