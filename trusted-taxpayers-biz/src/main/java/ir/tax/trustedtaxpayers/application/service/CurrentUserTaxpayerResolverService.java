@@ -1,6 +1,7 @@
 package ir.tax.trustedtaxpayers.application.service;
 
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.UserTaxpayerEntity;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.UserEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.UserTaxpayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +48,10 @@ public class CurrentUserTaxpayerResolverService {
                 return Optional.empty();
             }
 
-            return userRoleService.findUserIdByUsername(username);
+            return userRoleService.findUserByUsername(username)
+                    .filter(user -> Boolean.TRUE.equals(user.getIsActive())
+                            && "ACTIVE".equalsIgnoreCase(user.getStatus()))
+                    .map(UserEntity::getId);
         } catch (Exception e) {
             log.error("Error resolving current user ID", e);
             return Optional.empty();
