@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 @RestController
 @RequestMapping("/api/invoices")
 @Tag(name = "Invoice Transmission", description = "ارسال صورتحساب به سامانه مودیان\n\nراهنمای سریع:\n- Base: /api/invoices\n- ارسال: POST /{invoiceId}/transmit | وضعیت: GET /{invoiceId}/transmission-status\n- Async: POST /{invoiceId}/transmit-async\n- Batch: POST /batch-transmit → {invoiceIds:[UUID...]}\n- Retry: POST /{invoiceId}/retry | Retry همه: POST /retry-all-failed\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class InvoiceTransmissionController {
     
     private final InvoiceTransmissionService transmissionService;
