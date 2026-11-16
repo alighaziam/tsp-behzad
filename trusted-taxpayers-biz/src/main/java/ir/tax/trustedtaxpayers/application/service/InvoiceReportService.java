@@ -198,26 +198,21 @@ public class InvoiceReportService {
                                                   ) {
         List<Predicate> predicates = new ArrayList<>();
 
-       /* if (Objects.nonNull(filter) && filter.sellerTaxpayerId() != null) {
-            predicates.add(cb.equal(seller.get("id"), filter.sellerTaxpayerId()));
-        }
-
         if (Objects.nonNull(filter) && !filter.taxpayerIds().isEmpty()) {
             List<String> assignedTaxIds = taxpayerRepository.findAllById(filter.taxpayerIds()).stream()
                     .map(TaxpayerEntity::getTaxId)
                     .filter(Objects::nonNull)
                     .filter(value -> !value.isBlank())
+                    .map(value -> value.toUpperCase(Locale.ROOT))
                     .toList();
             if (assignedTaxIds.isEmpty()) {
                 predicates.add(cb.disjunction());
             } else {
-                Predicate sellerPredicate = cb.upper(header.get("tins")).in(
-                        assignedTaxIds.stream().map(value -> value.toUpperCase(Locale.ROOT)).toList());
-                Predicate buyerPredicate = cb.upper(header.get("tinb")).in(
-                        assignedTaxIds.stream().map(value -> value.toUpperCase(Locale.ROOT)).toList());
+                Predicate sellerPredicate = cb.upper(header.get("tins")).in(assignedTaxIds);
+                Predicate buyerPredicate = cb.upper(header.get("tinb")).in(assignedTaxIds);
                 predicates.add(cb.or(sellerPredicate, buyerPredicate));
             }
-        }*/
+        }/
 
         if (Objects.nonNull(filter) && (filter.taxpayerNo() != null && !filter.taxpayerNo().isBlank())) {
             String pattern = filter.taxpayerNo().trim().toUpperCase(Locale.ROOT);
