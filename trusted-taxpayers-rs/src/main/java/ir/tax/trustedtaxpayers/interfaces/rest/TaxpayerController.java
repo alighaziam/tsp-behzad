@@ -24,6 +24,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TaxpayerRepository;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.*;
 import ir.tax.trustedtaxpayers.interfaces.rest.mapper.TaxpayerMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/taxpayers")
 @Tag(name = "Taxpayer Management", description = "مدیریت مودیان مالیاتی\n\nراهنمای سریع:\n- Base: /api/taxpayers\n- ایجاد: POST /api/taxpayers/create → {taxId,name} → {id}\n- دریافت/لیست: GET /api/taxpayers/get/{id} | /all\n- جستجو: /by-taxpayer-no/{taxId} | /by-name/{name} | /taxpayer-no/{taxId}/exists\n- فیلتر پیشرفته (page): POST /api/taxpayers/search-custom?page=0&size=10 → [{key,operand,value}]\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class TaxpayerController extends BaseController<TaxpayerEntity, UUID> {
     private final TaxpayerService taxpayerService;
     private final BaseInfoService baseInfoService;
