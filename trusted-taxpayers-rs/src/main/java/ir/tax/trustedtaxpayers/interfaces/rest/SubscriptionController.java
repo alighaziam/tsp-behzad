@@ -11,6 +11,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerSubscriptionEnt
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -92,6 +93,7 @@ public class SubscriptionController {
         return ResponseEntity.ok(hasAccess);
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/purchase")
     @Operation(summary = "خرید اشتراک")
     public ResponseEntity<TaxpayerSubscriptionDto> purchaseSubscription(
@@ -108,6 +110,7 @@ public class SubscriptionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toSubscriptionDto(subscription));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping("/expiring")
     @Operation(summary = "اشتراک‌های در حال انقضا")
     public ResponseEntity<List<TaxpayerSubscriptionDto>> getExpiringSubscriptions(
@@ -116,6 +119,7 @@ public class SubscriptionController {
         return ResponseEntity.ok(subscriptions.stream().map(this::toSubscriptionDto).collect(Collectors.toList()));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping("/expired")
     @Operation(summary = "اشتراک‌های منقضی شده")
     public ResponseEntity<List<TaxpayerSubscriptionDto>> getExpiredSubscriptions() {
