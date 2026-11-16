@@ -99,7 +99,7 @@ public class CurrentUserTaxpayerResolverService {
             return Set.of();
         }
 
-        return userTaxpayerRepository.findByUserId(userId).stream()
+        return userTaxpayerRepository.findAllByUserId(userId).stream()
                 .map(UserTaxpayerEntity::getTaxpayerId)
                 .collect(Collectors.toUnmodifiableSet());
     }
