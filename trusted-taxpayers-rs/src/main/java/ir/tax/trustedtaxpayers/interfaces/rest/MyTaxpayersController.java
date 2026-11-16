@@ -30,7 +30,7 @@ public class MyTaxpayersController {
             return ResponseEntity.ok(List.of());
         }
         List<MyTaxpayerResponse> response = taxpayerRepository.findAllById(ids).stream()
-                .map(t -> new MyTaxpayerResponse(t.getId(), t.getTaxpayerNo(), t.getName()))
+                .map(t -> new MyTaxpayerResponse(t.getId(), t.getTaxId(), t.getName()))
                 .toList();
         return ResponseEntity.ok(response);
     }
