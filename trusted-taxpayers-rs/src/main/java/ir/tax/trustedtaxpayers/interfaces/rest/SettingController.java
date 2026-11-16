@@ -13,6 +13,7 @@ import ir.tax.trustedtaxpayers.interfaces.rest.dto.RateLimitConfigDto;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.ServiceInfoDto;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -60,6 +61,7 @@ public class SettingController {
     }
 
     @Operation(summary = "به‌روزرسانی value تنظیمات")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/key/{key}/value")
     public ResponseEntity<SettingEntity> updateValue(
             @PathVariable String key,
@@ -101,6 +103,7 @@ public class SettingController {
     }
 
     @Operation(summary = "ثبت/به‌روزرسانی تنظیمات RateLimit برای یک مسیر")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/rate")
     public ResponseEntity<Map<String, Object>> upsertRateForPath(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -183,6 +186,7 @@ public class SettingController {
     }
 
     @Operation(summary = "ثبت/به‌روزرسانی تنظیمات Circuit Breaker برای یک مسیر")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/cb")
     public ResponseEntity<Map<String, Object>> upsertCbForPath(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -378,6 +382,7 @@ public class SettingController {
     }
 
     @Operation(summary = "به‌روزرسانی تنظیمات سرویس/کلاس")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/service")
     public ResponseEntity<Map<String, Object>> upsertService(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -521,6 +526,7 @@ public class SettingController {
     }
 
     @Operation(summary = "به‌روزرسانی گروهی تنظیمات و گرم‌کردن کش")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping
     public ResponseEntity<List<SettingEntity>> updateAll(@RequestBody List<SettingEntity> settings) {
         List<SettingEntity> saved = settingService.updateAll(settings);
@@ -529,6 +535,7 @@ public class SettingController {
     }
 
     @Operation(summary = "به‌روزرسانی گروهی به صورت key/value")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/kv")
     public ResponseEntity<List<SettingEntity>> updateAllKeyValues(@RequestBody List<java.util.Map<String, String>> items) {
         List<SettingEntity> settings = items.stream()
