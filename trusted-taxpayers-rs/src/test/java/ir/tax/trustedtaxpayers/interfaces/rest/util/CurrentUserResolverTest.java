@@ -1,6 +1,5 @@
 package ir.tax.trustedtaxpayers.interfaces.rest.util;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
