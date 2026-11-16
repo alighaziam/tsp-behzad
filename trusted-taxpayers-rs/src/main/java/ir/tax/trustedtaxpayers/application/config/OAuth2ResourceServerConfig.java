@@ -104,9 +104,10 @@ public class OAuth2ResourceServerConfig {
                         .toList());
                 log.info("CORS configured for Production with {} allowed origins", origins.size());
             } else {
-                // Fallback: اگر تنظیم نشده، از pattern استفاده می‌کنیم (اما محدودتر)
-                log.warn("CORS allowed-origins not configured in Production. Using restrictive pattern.");
-                configuration.setAllowedOriginPatterns(List.of("https://*.yourdomain.com"));
+                // Fail closed: never start production with a placeholder or wildcard CORS origin.
+                throw new IllegalStateException(
+                        "cors.allowed-origins must be configured with explicit trusted origins in Production"
+                );
             }
         } else {
             // در Development، از "*" استفاده می‌شود
