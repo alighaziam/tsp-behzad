@@ -45,8 +45,13 @@ public class CustomJwtDecoder implements JwtDecoder {
                 // اعتبارسنجی issuer
                 if (issuerUri != null && !issuerUri.isEmpty()) {
                     String tokenIssuer = token.getIssuer() != null ? token.getIssuer().toString() : null;
-                    if (tokenIssuer != null && !tokenIssuer.equals(issuerUri)) {
-                        log.warn("Invalid issuer. Expected: {}, Got: {}", issuerUri, tokenIssuer);
+                    if (tokenIssuer == null || !issuerUri.equals(tokenIssuer)) {
+                        log.warn("Rejected JWT with missing or unexpected issuer. Expected: {}, Got: {}", issuerUri, tokenIssuer);
+                        return OAuth2TokenValidatorResult.failure(
+                            new org.springframework.security.oauth2.core.OAuth2Error(
+                                "invalid_token", "Token issuer is missing or invalid", null
+                            )
+                        );
                     }
                 }
                 
