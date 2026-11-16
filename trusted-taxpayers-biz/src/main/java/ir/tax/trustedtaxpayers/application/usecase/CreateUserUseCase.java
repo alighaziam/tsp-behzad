@@ -11,8 +11,8 @@ public class CreateUserUseCase {
         this.userRoleService = userRoleService;
     }
 
-    public UUID execute(String username, String passwordHash, String email) {
-        return userRoleService.createUser(username, passwordHash, email);
+    public UUID execute(String username, String rawPassword, String email) {
+        return userRoleService.createUser(username, rawPassword, email);
     }
 }
 
