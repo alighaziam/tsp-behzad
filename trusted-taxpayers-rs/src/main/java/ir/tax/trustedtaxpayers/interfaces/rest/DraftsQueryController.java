@@ -33,7 +33,6 @@ public class DraftsQueryController {
     private final ElectronicInvoiceSystemRepository systemRepository;
 
     @Operation(summary = "لیست پیش‌نویس‌ها", description = "لیست صورتحساب‌های با وضعیت DRAFT را برمی‌گرداند")
-    @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<Page<ElectronicInvoiceSystemEntity>> listDrafts(
             @RequestParam(name = "page", defaultValue = "0") int page,
@@ -45,7 +44,6 @@ public class DraftsQueryController {
     }
 
     @Operation(summary = "دریافت پیش‌نویس", description = "جزئیات یک پیش‌نویس را بر اساس شناسه هدر برمی‌گرداند")
-    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{headerId}")
     public ResponseEntity<?> getDraft(@PathVariable UUID headerId) {
         ElectronicInvoiceHeaderEntity header = headerRepository.findById(headerId)
@@ -61,7 +59,6 @@ public class DraftsQueryController {
     }
 
     @Operation(summary = "به‌روزرسانی ساده پیش‌نویس", description = "بخشی از فیلدهای سربرگ پیش‌نویس را به‌روزرسانی می‌کند (inno, tins, tinb, tbill)")
-    @PreAuthorize("isAuthenticated()")
     @PutMapping("/{headerId}")
     public ResponseEntity<?> updateDraft(@PathVariable UUID headerId, @RequestBody Map<String, Object> body) {
         ElectronicInvoiceHeaderEntity header = headerRepository.findById(headerId)
