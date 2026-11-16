@@ -43,7 +43,6 @@ public class InvoiceReportController {
 
     private final InvoiceReportService reportService;
     private final UserRoleService userRoleService;
-    private final CurrentUserTaxpayerResolverService taxpayerAccessResolver;
     private final CurrentUserTaxpayerResolverService taxpayerResolverService;
     private final TaxpayerRepository taxpayerRepository;
     private final InvoiceExportService exportService;
@@ -134,23 +133,12 @@ public class InvoiceReportController {
         List<ReportTaxpayerDto> taxpayerDtos = buildTaxpayerDtos(accessibleTaxpayers);
         Pageable pageable = buildPageable(page, size);
         
-        // برای کاربران TAXPAYER، sellerTaxpayerId را در فیلتر set می‌کنیم
+        // Filter both seller and buyer sides against the exact taxpayer assignments of this account.
         InvoiceReportFilter.InvoiceReportFilterBuilder filterBuilder = InvoiceReportFilter.builder()
+                .taxpayerIds(appliedTaxpayers)
                 .statuses(statuses)
                 .fromDate(fromDate)
                 .toDate(toDate);
-        
-        if (isTaxpayerUser()) {
-            // برای کاربران TAXPAYER، فقط صورتحساب‌هایی که sellerTaxpayerId آن‌ها برابر مودی کاربر است را نمایش می‌دهیم
-            UUID primaryTaxpayerId = taxpayerResolverService.findCurrentUserPrimaryTaxpayerId()
-                    .orElse(null);
-            if (primaryTaxpayerId != null) {
-                filterBuilder.sellerTaxpayerId(primaryTaxpayerId);
-            }
-        } else {
-            // برای کاربران ADMIN، از taxpayerIds استفاده می‌کنیم
-            filterBuilder.taxpayerIds(appliedTaxpayers);
-        }
 
         InvoiceReportResponseDto response = reportService.fetchReport(filterBuilder.build(), pageable, taxpayerDtos);
         return ResponseEntity.ok(response);
@@ -312,19 +300,10 @@ public class InvoiceReportController {
         }
 
         InvoiceReportFilter.InvoiceReportFilterBuilder filterBuilder = InvoiceReportFilter.builder()
+                .taxpayerIds(appliedTaxpayers)
                 .statuses(statuses)
                 .fromDate(fromDate)
                 .toDate(toDate);
-        
-        if (isTaxpayerUser()) {
-            UUID primaryTaxpayerId = taxpayerResolverService.findCurrentUserPrimaryTaxpayerId()
-                    .orElse(null);
-            if (primaryTaxpayerId != null) {
-                filterBuilder.sellerTaxpayerId(primaryTaxpayerId);
-            }
-        } else {
-            filterBuilder.taxpayerIds(appliedTaxpayers);
-        }
         
         InvoiceReportFilter filter = filterBuilder.build();
 
