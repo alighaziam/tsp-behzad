@@ -39,6 +39,7 @@ import java.util.*;
 @RequestMapping({"/api/users", "/api/v1/users"})
 @Tag(name = "User Management", description = "مدیریت کاربران و نقش‌ها\n\nراهنمای سریع:\n- Base: /api/users\n- هدرها: Content-Type: application/json و Authorization: Bearer <JWT>\n- صفحه‌بندی: page از 0، size پیش‌فرض 20، sortBy و asc\n- نمونه‌ها:\n  * ایجاد کاربر: POST /api/users → {username,passwordHash,email} → {id}\n  * نقش‌های کاربر: GET /api/users/{id}/roles\n  * جستجو: POST /api/users/search?page=0&size=20 → [{key:\"username\",operand:\"LIKE\",value:\"test\"}]\n")
 @Validated
+@PreAuthorize("hasAuthority('ADMIN')")
 public class UserController {
     private final UserRoleService userRoleService;
     private final SearchUsersUseCase searchUsersUseCase;
@@ -94,6 +95,7 @@ public class UserController {
             }
     )
     @PostMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<ir.tax.trustedtaxpayers.interfaces.rest.dto.CreatedIdResponse> create(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "اطلاعات کاربر",
