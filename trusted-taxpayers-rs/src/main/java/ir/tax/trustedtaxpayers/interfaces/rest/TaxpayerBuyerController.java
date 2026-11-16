@@ -11,6 +11,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerEntity;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/taxpayer-buyers")
+@PreAuthorize("hasAuthority('ADMIN')")
 @Tag(name = "Taxpayer Buyer Management", description = "مدیریت رابطه بین مودی مالیاتی (فروشنده) و خریدار")
 @RequiredArgsConstructor
 public class TaxpayerBuyerController {
