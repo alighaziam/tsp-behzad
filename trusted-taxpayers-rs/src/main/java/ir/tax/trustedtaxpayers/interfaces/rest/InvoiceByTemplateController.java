@@ -12,6 +12,7 @@ import ir.tax.trustedtaxpayers.application.service.InvoiceExportService;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeaderEntity;
 import ir.tax.trustedtaxpayers.interfaces.dto.ElectronicInvoiceDtos;
 import ir.tax.trustedtaxpayers.interfaces.mapper.ElectronicInvoiceMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/invoices/by-template")
 @Tag(name = "Invoices by Template", description = "لود کردن صورتحساب‌ها بر اساس الگو\n\nراهنمای سریع:\n- Base: /api/invoices/by-template\n- صفحه‌بندی: GET /{templateCode}?page=0&size=20&sortBy=createdOn&direction=DESC\n- همه: GET /{templateCode}/all | فیلتر نوع: /{templateCode}/inty/{inty}\n- تعداد: /{templateCode}/count | کش: DELETE /cache/{templateCode}\n- خروجی: /{templateCode}/export/pdf | /export/csv\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class InvoiceByTemplateController {
     
     private final InvoiceByTemplateService invoiceByTemplateService;
