@@ -31,10 +31,16 @@ public class UserTaxpayerManagementService {
         if (!ALLOWED_ROLES.contains(normalizedRole)) {
             throw new IllegalArgumentException("Unsupported taxpayer relation role");
         }
-        userRepository.findById(userId)
+        var user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("کاربر مورد نظر یافت نشد."));
-        taxpayerRepository.findById(taxpayerId)
+        var taxpayer = taxpayerRepository.findById(taxpayerId)
                 .orElseThrow(() -> new ResourceNotFoundException("مودی مورد نظر یافت نشد."));
+        if (!Boolean.TRUE.equals(user.getIsActive()) || !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new IllegalStateException("Cannot assign a taxpayer to an inactive user");
+        }
+        if (!Boolean.TRUE.equals(taxpayer.getIsActive())) {
+            throw new IllegalStateException("Cannot assign an inactive taxpayer");
+        }
 
         UserTaxpayerEntity association = userTaxpayerRepository
                 .findByUserIdAndTaxpayerId(userId, taxpayerId)
