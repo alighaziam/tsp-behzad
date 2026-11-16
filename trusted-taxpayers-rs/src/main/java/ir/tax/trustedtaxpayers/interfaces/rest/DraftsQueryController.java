@@ -26,6 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/drafts")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ADMIN')")
 public class DraftsQueryController {
 
     private final ElectronicInvoiceHeaderRepository headerRepository;
