@@ -14,6 +14,7 @@ import ir.tax.trustedtaxpayers.interfaces.rest.dto.ErrorResponse;
 import ir.tax.trustedtaxpayers.interfaces.rest.mapper.AuditLogMapper;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -27,6 +28,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/audit-logs")
+@PreAuthorize("hasAuthority('ADMIN')")
 @Tag(name = "Audit Log Management", description = "مدیریت لاگ‌های حسابرسی\n\nراهنمای سریع:\n- Base: /api/audit-logs\n- همه: GET /all\n- جزئیات: GET /by-id/{id}\n- فیلترها: /by-actor/{actorUserId} | /by-entity/{entityName} | /by-action/{action} | /by-date-range?start=...&end=...\n")
 public class AuditLogController extends BaseController<AuditLogEntity, UUID> {
     private final AuditLogService auditLogService;
