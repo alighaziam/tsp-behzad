@@ -27,6 +27,15 @@ public class JwtService {
     }
 
     public String generate(String subject, long ttlMillis, Map<String, Object> claims) {
+        if (subject == null || subject.isBlank()) {
+            throw new IllegalArgumentException("JWT subject must not be blank");
+        }
+        if (ttlMillis <= 0) {
+            throw new IllegalArgumentException("JWT time-to-live must be greater than zero");
+        }
+        if (claims == null) {
+            throw new IllegalArgumentException("JWT claims must not be null");
+        }
         long now = System.currentTimeMillis();
         return Jwts.builder()
                 .setSubject(subject)
@@ -38,7 +47,14 @@ public class JwtService {
     }
 
     public Claims parse(String token) {
-        return Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(token).getBody();
+        Claims claims = Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(token).getBody();
+        if (claims.getExpiration() == null) {
+            throw new IllegalArgumentException("JWT expiration claim is required");
+        }
+        if (claims.getSubject() == null || claims.getSubject().isBlank()) {
+            throw new IllegalArgumentException("JWT subject claim is required");
+        }
+        return claims;
     }
 }
 
