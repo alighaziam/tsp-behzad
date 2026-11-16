@@ -26,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.core.env.Environment;
+import java.util.Arrays;
 
 import java.util.Collections;
 import java.util.List;
@@ -50,10 +52,13 @@ public class AuthController {
 
     private final JwtService jwtService;
     private final UserAuthenticationService authenticationService;
+    private final Environment environment;
 
-    public AuthController(JwtService jwtService, UserAuthenticationService authenticationService) {
+    public AuthController(JwtService jwtService, UserAuthenticationService authenticationService,
+                         Environment environment) {
         this.jwtService = jwtService;
         this.authenticationService = authenticationService;
+        this.environment = environment;
     }
 
     @Operation(summary = "بررسی سلامت سرویس احراز هویت")
@@ -89,7 +94,10 @@ public class AuthController {
     public ResponseEntity<ForgotPasswordResponse> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
         Optional<String> token = authenticationService.initiatePasswordReset(request.identifier());
-        return ResponseEntity.ok(new ForgotPasswordResponse(token.isPresent(), token.orElse(null)));
+        boolean production = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        // Never disclose account existence or a usable reset token through a public endpoint.
+        // Production email/SMS delivery must be integrated before enabling password recovery there.
+        return ResponseEntity.ok(new ForgotPasswordResponse(true, production ? null : token.orElse(null)));
     }
 
     @Operation(summary = "تنظیم رمز جدید با استفاده از توکن بازیابی")
