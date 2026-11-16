@@ -8,6 +8,7 @@ import ir.tax.trustedtaxpayers.interfaces.mapper.ElectronicInvoiceMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +31,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/electronic-invoice-systems")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Electronic Invoice System", description = "مدیریت اطلاعات سیستمی صورتحساب الکترونیکی\n\nراهنمای سریع:\n- Base: /api/electronic-invoice-systems\n- بر اساس Header: /by-header/{headerId}\n- بر اساس وضعیت: /by-status/{sts}?page=0&size=10\n- accepted/pending/failed: /status/accepted|pending|failed?page=0&size=20\n- همه: /all | جزئیات: /details/{id}\n")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class ElectronicInvoiceSystemController extends BaseController<ElectronicInvoiceSystemEntity, UUID> {
     private final ElectronicInvoiceSystemService systemService;
     private final ElectronicInvoiceSystemRepository systemRepository;
