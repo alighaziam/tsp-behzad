@@ -18,7 +18,7 @@ class CurrentUserResolverTest {
 
     @Test
     void doesNotTrustClientSuppliedXUserHeader() {
-        MockMockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-User", "administrator");
 
         assertNull(CurrentUserResolver.resolveUsername(request));
@@ -26,7 +26,7 @@ class CurrentUserResolverTest {
 
     @Test
     void resolvesAuthenticatedPrincipalInsteadOfSpoofedHeader() {
-        HttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-User", "administrator");
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated("real-user", null, java.util.List.of())
