@@ -6,23 +6,16 @@ import ir.tax.trustedtaxpayers.application.cache.NoCache;
 import ir.tax.trustedtaxpayers.core.spec.BaseSpecification;
 import ir.tax.trustedtaxpayers.core.spec.FilterRequest;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerEntity;
-import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.UserRoleEntity;
-import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.UserTaxpayerEntity;
-import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.RoleRepository;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TaxpayerRepository;
-import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.UserRoleRepository;
-import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.UserTaxpayerRepository;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.spec.FilterOperand;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,25 +26,10 @@ import java.util.stream.Collectors;
 public class TaxpayerService extends ir.tax.trustedtaxpayers.core.service.BaseCacheServiceImpl<TaxpayerEntity, UUID> {
     
     private final TaxpayerRepository taxpayerRepository;
-    private final UserRoleService userRoleService;
-    private final PasswordEncoder passwordEncoder;
-    private final RoleRepository roleRepository;
-    private final UserRoleRepository userRoleRepository;
-    private final UserTaxpayerRepository userTaxpayerRepository;
 
-    public TaxpayerService(TaxpayerRepository taxpayerRepository,
-                           UserRoleService userRoleService,
-                           PasswordEncoder passwordEncoder,
-                           RoleRepository roleRepository,
-                           UserRoleRepository userRoleRepository,
-                           UserTaxpayerRepository userTaxpayerRepository) {
+    public TaxpayerService(TaxpayerRepository taxpayerRepository) {
         super(taxpayerRepository);
         this.taxpayerRepository = taxpayerRepository;
-        this.userRoleService = userRoleService;
-        this.passwordEncoder = passwordEncoder;
-        this.roleRepository = roleRepository;
-        this.userRoleRepository = userRoleRepository;
-        this.userTaxpayerRepository = userTaxpayerRepository;
     }
 
     @CacheEvict(cacheName = "taxpayers", allEntries = true)
@@ -61,53 +39,8 @@ public class TaxpayerService extends ir.tax.trustedtaxpayers.core.service.BaseCa
         taxpayer.setIsActive(true);
         UUID taxpayerId = save(taxpayer).getId();
         
-        // ایجاد خودکار User برای مودی
-        String taxId = taxpayer.getTaxId();
-        if (taxId != null && !taxId.isBlank()) {
-            UUID userId;
-            
-            // بررسی وجود کاربر با این نام کاربری
-            if (userRoleService.userExistsByUsername(taxId)) {
-                // اگر کاربر از قبل وجود داشت، از همان استفاده می‌کنیم
-                userId = userRoleService.findUserIdByUsername(taxId)
-                    .orElseThrow(() -> new IllegalStateException("کاربر با نام کاربری " + taxId + " یافت نشد."));
-            } else {
-                // ایجاد User با نام کاربری = شماره اقتصادی و رمز پیش‌فرض = 123456
-                String passwordHash = passwordEncoder.encode("123456");
-                userId = userRoleService.createUser(taxId, passwordHash, null);
-            }
-            
-            // بررسی وجود رکورد در جدول واسط USER_TAXPAYERS
-            boolean userTaxpayerExists = userTaxpayerRepository.findByUserId(userId).stream()
-                .anyMatch(ut -> ut.getTaxpayerId().equals(taxpayerId));
-            
-            if (!userTaxpayerExists) {
-                // ایجاد رکورد در جدول واسط USER_TAXPAYERS
-                UserTaxpayerEntity userTaxpayer = new UserTaxpayerEntity();
-                userTaxpayer.setUserId(userId);
-                userTaxpayer.setTaxpayerId(taxpayerId);
-                userTaxpayer.setRelationRole("OWNER");
-                userTaxpayerRepository.save(userTaxpayer);
-            }
-            
-            // پیدا کردن نقش TAXPAYER
-            roleRepository.findByNameIgnoreCase("TAXPAYER")
-                .ifPresent(role -> {
-                    // بررسی وجود رکورد در جدول واسط USER_ROLES
-                    boolean userRoleExists = userRoleRepository.findByUserId(userId).stream()
-                        .anyMatch(ur -> ur.getRoleId().equals(role.getId()) && ur.isActive());
-                    
-                    if (!userRoleExists) {
-                        // ایجاد رکورد در جدول واسط USER_ROLES
-                        UserRoleEntity userRole = new UserRoleEntity();
-                        userRole.setUserId(userId);
-                        userRole.setRoleId(role.getId());
-                        userRole.setAssignedAt(OffsetDateTime.now());
-                        userRole.setActive(true);
-                        userRoleRepository.save(userRole);
-                    }
-                });
-        }
+        // Login accounts and taxpayer access mappings are provisioned separately
+        // by an administrator; never create accounts with a predictable default password.
         
         return taxpayerId;
     }
