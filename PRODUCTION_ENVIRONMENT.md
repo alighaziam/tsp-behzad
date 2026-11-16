@@ -32,3 +32,7 @@ The production profile intentionally requires deployment-specific values. Do not
 6. Restrict actuator endpoints and network access at the deployment layer; expose only the health endpoints required by the platform.
 
 No production credentials or endpoints are supplied by this repository. They must be provided by the system owner/operator.
+
+## Password reset delivery requirement
+
+The public forgot-password endpoint deliberately does not disclose whether an account exists and never returns a usable reset token when the `prod` profile is active. The current repository does not contain an email/SMS delivery integration. Therefore production password recovery is not operational until a verified delivery provider is configured and the reset token is delivered through a short-lived, single-use link or code. Do not re-enable token disclosure in the API response as a workaround.
