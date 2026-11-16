@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.tax.trustedtaxpayers.biz.service.InvoiceTransmissionService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -160,6 +161,7 @@ public class InvoiceTransmissionController {
      * @param request درخواست شامل لیست شناسه‌های صورتحساب
      * @return نتیجه ارسال انبوه
      */
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/batch-transmit")
     @Operation(
         summary = "ارسال Batch صورتحساب‌ها",
@@ -242,6 +244,7 @@ public class InvoiceTransmissionController {
      * 
      * @return نتیجه Retry انبوه
      */
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/retry-all-failed")
     @Operation(
         summary = "Retry انبوه صورتحساب‌های ناموفق",
