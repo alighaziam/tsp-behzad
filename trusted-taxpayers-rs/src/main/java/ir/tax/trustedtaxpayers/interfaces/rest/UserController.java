@@ -113,7 +113,7 @@ public class UserController {
                     )
             )
             @jakarta.validation.Valid @RequestBody ir.tax.trustedtaxpayers.interfaces.rest.dto.CreateUserRequest req) {
-        UUID id = createUserUseCase.execute(req.username(), req.passwordHash(), req.email());
+        UUID id = createUserUseCase.execute(req.username(), req.password(), req.email());
         return ir.tax.trustedtaxpayers.interfaces.rest.util.ResponseFactory.created(id);
     }
 
