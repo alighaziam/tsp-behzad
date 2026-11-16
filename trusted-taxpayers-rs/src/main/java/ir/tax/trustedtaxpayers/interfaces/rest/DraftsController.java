@@ -9,6 +9,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeader
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceHeaderRepository;
 import ir.tax.trustedtaxpayers.externalService.integration.TaxpayerSystemClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Tag(name = "Draft Invoices", description = "مدیریت پیش‌نویس‌ها و ارسال به سامانه مودیان")
 @RequestMapping("/api/drafts")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class DraftsController {
 
 	private final ElectronicInvoiceHeaderRepository invoiceHeaderRepository;
