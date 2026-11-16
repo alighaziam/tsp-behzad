@@ -3,9 +3,8 @@ package ir.tax.trustedtaxpayers.interfaces.rest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.tax.trustedtaxpayers.application.service.InvoiceTemplateService;
-import ir.tax.trustedtaxpayers.application.service.UserRoleService;
+import ir.tax.trustedtaxpayers.application.service.CurrentUserTaxpayerResolverService;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.InvoiceTemplateEntity;
-import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.UserInvoicePreferenceRepository;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.CreateInvoiceTemplateRequest;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.InvoiceTemplateDto;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,7 +19,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static ir.tax.trustedtaxpayers.interfaces.rest.util.CurrentUserResolver.resolveUsername;
 
 @RestController
 @RequestMapping({"/api/invoice-templates", "/api/v1/invoice-templates"})
@@ -37,8 +35,7 @@ import static ir.tax.trustedtaxpayers.interfaces.rest.util.CurrentUserResolver.r
 public class InvoiceTemplateController {
 
     private final InvoiceTemplateService templateService;
-    private final UserRoleService userRoleService;
-    private final UserInvoicePreferenceRepository preferenceRepository;
+    private final CurrentUserTaxpayerResolverService taxpayerAccess;
 
     @GetMapping("/me")
     @PreAuthorize("hasAnyAuthority('TAXPAYER','ADMIN')")
@@ -48,13 +45,15 @@ public class InvoiceTemplateController {
             @RequestParam(required = false) UUID taxpayerId,
             @RequestParam(required = false) Integer patternNumber) {
 
-        UUID userId = resolveCurrentUserId(request);
+        UUID userId = taxpayerAccess.resolveCurrentUserId().orElse(null);
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : 
-                getFirstAccessibleTaxpayerId(userId);
+        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : taxpayerAccess.findCurrentUserPrimaryTaxpayerId().orElse(null);
+        if (effectiveTaxpayerId != null && !taxpayerAccess.hasAccessToTaxpayer(effectiveTaxpayerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         
         if (effectiveTaxpayerId == null) {
             return ResponseEntity.ok(List.of());
@@ -81,13 +80,15 @@ public class InvoiceTemplateController {
             @PathVariable UUID templateId,
             @RequestParam(required = false) UUID taxpayerId) {
 
-        UUID userId = resolveCurrentUserId(request);
+        UUID userId = taxpayerAccess.resolveCurrentUserId().orElse(null);
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : 
-                getFirstAccessibleTaxpayerId(userId);
+        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : taxpayerAccess.findCurrentUserPrimaryTaxpayerId().orElse(null);
+        if (effectiveTaxpayerId != null && !taxpayerAccess.hasAccessToTaxpayer(effectiveTaxpayerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         
         if (effectiveTaxpayerId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -110,13 +111,15 @@ public class InvoiceTemplateController {
             @Valid @RequestBody CreateInvoiceTemplateRequest createRequest,
             @RequestParam(required = false) UUID taxpayerId) {
 
-        UUID userId = resolveCurrentUserId(request);
+        UUID userId = taxpayerAccess.resolveCurrentUserId().orElse(null);
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : 
-                getFirstAccessibleTaxpayerId(userId);
+        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : taxpayerAccess.findCurrentUserPrimaryTaxpayerId().orElse(null);
+        if (effectiveTaxpayerId != null && !taxpayerAccess.hasAccessToTaxpayer(effectiveTaxpayerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         
         if (effectiveTaxpayerId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -142,13 +145,15 @@ public class InvoiceTemplateController {
             @PathVariable UUID templateId,
             @RequestParam(required = false) UUID taxpayerId) {
 
-        UUID userId = resolveCurrentUserId(request);
+        UUID userId = taxpayerAccess.resolveCurrentUserId().orElse(null);
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : 
-                getFirstAccessibleTaxpayerId(userId);
+        UUID effectiveTaxpayerId = taxpayerId != null ? taxpayerId : taxpayerAccess.findCurrentUserPrimaryTaxpayerId().orElse(null);
+        if (effectiveTaxpayerId != null && !taxpayerAccess.hasAccessToTaxpayer(effectiveTaxpayerId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         
         if (effectiveTaxpayerId == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -160,22 +165,6 @@ public class InvoiceTemplateController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
-    }
-
-    private UUID resolveCurrentUserId(HttpServletRequest request) {
-        String username = resolveUsername(request);
-        if (username == null) {
-            return null;
-        }
-        return userRoleService.findUserIdByUsername(username).orElse(null);
-    }
-
-    private UUID getFirstAccessibleTaxpayerId(UUID userId) {
-        return preferenceRepository.findByUserId(userId).stream()
-                .filter(pref -> pref.getIsActive())
-                .map(pref -> pref.getTaxpayerId())
-                .findFirst()
-                .orElse(null);
     }
 
     private InvoiceTemplateDto toDto(InvoiceTemplateEntity entity) {
