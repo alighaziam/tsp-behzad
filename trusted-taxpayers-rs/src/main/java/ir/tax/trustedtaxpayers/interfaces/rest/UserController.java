@@ -560,7 +560,7 @@ public class UserController {
                                                        )
                                                )
                                                @jakarta.validation.Valid @RequestBody SetUserPasswordRequest request) {
-        userRoleService.setPassword(id, request.password());
+        userRoleService.setPassword(id, request.passwordHash());
         return ResponseEntity.ok().build();
     }
 
