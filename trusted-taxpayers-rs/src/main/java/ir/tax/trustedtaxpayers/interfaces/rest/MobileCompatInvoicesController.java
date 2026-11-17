@@ -22,6 +22,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/mobile-compat/api/invoices")
+@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
 @Tag(name = "Mobile-Compat Invoices", description = "Mobile compatible listing and search for invoices")
 public class MobileCompatInvoicesController {
 
