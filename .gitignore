@@ -126,3 +126,8 @@ yarn-error.log*
 
 # Misc caches
 .cache/
+
+# Local deployment secrets
+.env
+.env.*
+!.env.example
