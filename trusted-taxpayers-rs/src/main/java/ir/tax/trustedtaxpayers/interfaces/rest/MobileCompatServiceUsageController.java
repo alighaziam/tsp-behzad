@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -41,11 +43,17 @@ public class MobileCompatServiceUsageController {
 		if (unauthorized(auth)) return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
 		if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1);
 		if (endDate == null) endDate = LocalDate.now();
-		List<AuditLogEntity> accessLogs = auditLogRepository.findByEntityName("SERVICE_ACCESS");
+		OffsetDateTime start = startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
+		OffsetDateTime endExclusive = endDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+		List<AuditLogEntity> accessLogs = auditLogRepository.findByEntityNameAndCreatedOnRange(
+				"SERVICE_ACCESS", start, endExclusive);
 		long totalAccess = accessLogs.size();
-		long totalSuccessfulAccess = accessLogs.stream().filter(l -> l.getAction() != null && l.getAction().contains("GRANTED")).count();
-		long totalFailedAccess = accessLogs.stream().filter(l -> l.getAction() != null && l.getAction().contains("DENIED")).count();
-		long totalServiceUsage = serviceUsageRepository.count();
+		long totalSuccessfulAccess = accessLogs.stream()
+				.filter(l -> l.getAction() != null && l.getAction().contains("GRANTED")).count();
+		long totalFailedAccess = accessLogs.stream()
+				.filter(l -> l.getAction() != null && l.getAction().contains("DENIED")).count();
+		Long usageCount = serviceUsageRepository.sumUsageBetween(startDate, endDate);
+		long totalServiceUsage = usageCount != null ? usageCount : 0L;
 		return ResponseEntity.ok(Map.of(
 				"start_date", startDate,
 				"end_date", endDate,
