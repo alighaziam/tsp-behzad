@@ -71,8 +71,10 @@ class CurrentUserTaxpayerResolverServiceTest {
     void doesNotGuessPrimaryWhenUserHasMultipleTaxpayers() {
         UUID firstId = UUID.randomUUID();
         UUID secondId = UUID.randomUUID();
+        UserTaxpayerEntity firstAssociation = association(firstId);
+        UserTaxpayerEntity secondAssociation = association(secondId);
         when(associationRepository.findAllByUserId(userId))
-                .thenReturn(List.of(association(firstId), association(secondId)));
+                .thenReturn(List.of(firstAssociation, secondAssociation));
         when(taxpayerRepository.findAllById(Set.of(firstId, secondId)))
                 .thenReturn(List.of(taxpayer(firstId, true), taxpayer(secondId, true)));
 
@@ -82,7 +84,8 @@ class CurrentUserTaxpayerResolverServiceTest {
     @Test
     void returnsPrimaryWhenExactlyOneActiveTaxpayerExists() {
         UUID taxpayerId = UUID.randomUUID();
-        when(associationRepository.findAllByUserId(userId)).thenReturn(List.of(association(taxpayerId)));
+        UserTaxpayerEntity taxpayerAssociation = association(taxpayerId);
+        when(associationRepository.findAllByUserId(userId)).thenReturn(List.of(taxpayerAssociation));
         when(taxpayerRepository.findAllById(Set.of(taxpayerId)))
                 .thenReturn(List.of(taxpayer(taxpayerId, true)));
 
