@@ -93,10 +93,8 @@ public class InvoiceByTaxpayerController {
             String direction,
             jakarta.servlet.http.HttpServletRequest request) {
         
-        /*Page<ElectronicInvoiceHeaderEntity> invoices = invoiceByTaxpayerService
-            .loadInvoicesByTaxpayer(taxpayerId, page, size, sortBy, direction);*/
-
-        Page<ElectronicInvoiceHeaderEntity> invoices = null;
+        Page<ElectronicInvoiceHeaderEntity> invoices = invoiceByTaxpayerService
+                .loadInvoicesByTaxpayer(taxpayerId, page, size, sortBy, direction);
         
         java.util.List<UUID> headerIds = invoices.getContent().stream().map(ElectronicInvoiceHeaderEntity::getId).toList();
         Map<UUID, String> stsMap = systemService.findStsByHeaderIds(headerIds);
