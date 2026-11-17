@@ -41,7 +41,7 @@ public class MobileCompatServiceUsageController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 		if (unauthorized(auth)) return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
-		if (startDate == null) startDate = LocalDate.now().withDayOfMonth(1);
+		if (startDate == null) startDate = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1);
 		if (endDate == null) endDate = LocalDate.now();
 		OffsetDateTime start = startDate.atStartOfDay().atOffset(ZoneOffset.UTC);
 		OffsetDateTime endExclusive = endDate.plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
