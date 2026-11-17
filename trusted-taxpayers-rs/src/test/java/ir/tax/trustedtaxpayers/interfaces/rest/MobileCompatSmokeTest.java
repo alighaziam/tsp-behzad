@@ -97,6 +97,42 @@ class MobileCompatSmokeTest {
     }
 
     @Test
+    @DisplayName("Invoice listing requires administrator authority")
+    void invoicesRequireAdmin() throws Exception {
+        mockMvc.perform(get("/mobile-compat/api/invoices")
+                        .header(HttpHeaders.AUTHORIZATION, authorization("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Role assignment requires administrator authority")
+    void roleAssignmentRequiresAdmin() throws Exception {
+        mockMvc.perform(post("/mobile-compat/api/user-roles/assign")
+                        .header(HttpHeaders.AUTHORIZATION, authorization("USER"))
+                        .contentType("application/json")
+                        .content("{\"user_id\":\"00000000-0000-0000-0000-000000000001\",\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Global service usage report requires administrator authority")
+    void serviceUsageRequiresAdmin() throws Exception {
+        mockMvc.perform(get("/mobile-compat/api/service-usage/summary")
+                        .header(HttpHeaders.AUTHORIZATION, authorization("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Template creation requires administrator authority")
+    void templateCreationRequiresAdmin() throws Exception {
+        mockMvc.perform(post("/mobile-compat/api/templates")
+                        .header(HttpHeaders.AUTHORIZATION, authorization("USER"))
+                        .contentType("application/json")
+                        .content("{\"code\":\"MOBILE_TEST\",\"name\":\"Test\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @DisplayName("Roles list accepts a valid JWT")
     void rolesListOk() throws Exception {
         mockMvc.perform(get("/mobile-compat/api/user-roles/roles")
