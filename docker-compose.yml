@@ -14,7 +14,7 @@ services:
     volumes:
       - oracle-data:/opt/oracle/oradata
     healthcheck:
-      test: ["CMD-SHELL", "sqlplus -S sys/${ORACLE_PWD}@localhost:1521/XE as sysdba <<< 'SELECT 1 FROM DUAL;' || exit 1"]
+      test: ["CMD-SHELL", "printf 'SELECT 1 FROM DUAL;\\n' | sqlplus -S \"sys/$ORACLE_PWD@localhost:1521/XE as sysdba\" | grep -q 1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
