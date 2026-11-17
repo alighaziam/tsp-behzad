@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -139,7 +140,14 @@ public class InvoiceFormSubmissionController {
 
         updateUserInvoicePreferences(httpRequest, submitResult);
 
-        return ResponseEntity.ok(java.util.Map.of(
+        HttpStatus responseStatus = switch (submitResult.transmissionStatus.toUpperCase(java.util.Locale.ROOT)) {
+            case "ACCEPTED" -> HttpStatus.OK;
+            case "SUBMITTED" -> HttpStatus.ACCEPTED;
+            case "REJECTED" -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case "FAILED" -> HttpStatus.BAD_GATEWAY;
+            default -> HttpStatus.OK;
+        };
+        return ResponseEntity.status(responseStatus).body(java.util.Map.of(
                 "headerId", submitResult.headerId,
                 "taxId", submitResult.taxId,
                 "transmissionStatus", submitResult.transmissionStatus,
