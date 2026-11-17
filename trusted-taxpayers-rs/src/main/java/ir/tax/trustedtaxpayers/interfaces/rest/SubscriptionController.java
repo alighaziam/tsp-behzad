@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.tax.trustedtaxpayers.application.service.ServiceAccessService;
 import ir.tax.trustedtaxpayers.application.service.SubscriptionService;
+import ir.tax.trustedtaxpayers.application.service.CurrentUserTaxpayerResolverService;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ServiceEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.SubscriptionPlanEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.SubscriptionPlanServiceEntity;
@@ -15,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +31,7 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
     private final ServiceAccessService serviceAccessService;
+    private final CurrentUserTaxpayerResolverService currentUserTaxpayerResolverService;
 
     @GetMapping("/plans")
     @Operation(summary = "لیست پلن‌های فعال")
@@ -64,6 +68,7 @@ public class SubscriptionController {
     @GetMapping("/taxpayer/{taxpayerId}")
     @Operation(summary = "لیست اشتراک‌های یک مودی")
     public ResponseEntity<List<TaxpayerSubscriptionDto>> getTaxpayerSubscriptions(@PathVariable UUID taxpayerId) {
+        if (!canAccessTaxpayer(taxpayerId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         List<TaxpayerSubscriptionEntity> subscriptions = subscriptionService.getTaxpayerSubscriptions(taxpayerId);
         return ResponseEntity.ok(subscriptions.stream().map(this::toSubscriptionDto).collect(Collectors.toList()));
     }
@@ -71,6 +76,7 @@ public class SubscriptionController {
     @GetMapping("/taxpayer/{taxpayerId}/active")
     @Operation(summary = "اشتراک فعال مودی")
     public ResponseEntity<TaxpayerSubscriptionDto> getActiveSubscription(@PathVariable UUID taxpayerId) {
+        if (!canAccessTaxpayer(taxpayerId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         return subscriptionService.getActiveSubscription(taxpayerId)
                 .map(this::toSubscriptionDto)
                 .map(ResponseEntity::ok)
@@ -80,6 +86,7 @@ public class SubscriptionController {
     @GetMapping("/taxpayer/{taxpayerId}/services")
     @Operation(summary = "لیست خدمات قابل دسترس برای مودی")
     public ResponseEntity<List<ServiceDto>> getTaxpayerServices(@PathVariable UUID taxpayerId) {
+        if (!canAccessTaxpayer(taxpayerId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         List<ServiceEntity> services = subscriptionService.getTaxpayerServices(taxpayerId);
         return ResponseEntity.ok(services.stream().map(this::toServiceDto).collect(Collectors.toList()));
     }
@@ -89,6 +96,7 @@ public class SubscriptionController {
     public ResponseEntity<Boolean> hasTaxpayerServiceAccess(
             @PathVariable UUID taxpayerId,
             @PathVariable String serviceCode) {
+        if (!canAccessTaxpayer(taxpayerId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         boolean hasAccess = subscriptionService.hasTaxpayerServiceAccess(taxpayerId, serviceCode);
         return ResponseEntity.ok(hasAccess);
     }
@@ -99,15 +107,9 @@ public class SubscriptionController {
     public ResponseEntity<TaxpayerSubscriptionDto> purchaseSubscription(
             @RequestParam UUID taxpayerId,
             @Valid @RequestBody PurchaseSubscriptionRequest request) {
-        
-        TaxpayerSubscriptionEntity subscription = subscriptionService.purchaseSubscription(
-                taxpayerId,
-                request.planId(),
-                request.paymentReference(),
-                request.notes()
-        );
-        
-        return ResponseEntity.status(HttpStatus.CREATED).body(toSubscriptionDto(subscription));
+        // Payment references are not independently verified by a payment gateway yet.
+        // Keep purchase disabled rather than creating a paid subscription on caller input.
+        return ResponseEntity.status(HttpStatus.GONE).build();
     }
 
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -125,6 +127,13 @@ public class SubscriptionController {
     public ResponseEntity<List<TaxpayerSubscriptionDto>> getExpiredSubscriptions() {
         List<TaxpayerSubscriptionEntity> subscriptions = subscriptionService.getExpiredSubscriptions();
         return ResponseEntity.ok(subscriptions.stream().map(this::toSubscriptionDto).collect(Collectors.toList()));
+    }
+
+    private boolean canAccessTaxpayer(UUID taxpayerId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean admin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ADMIN".equals(authority.getAuthority()));
+        return admin || currentUserTaxpayerResolverService.hasAccessToTaxpayer(taxpayerId);
     }
 
     private SubscriptionPlanDto toPlanDto(SubscriptionPlanEntity entity) {
