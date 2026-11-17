@@ -315,7 +315,6 @@ public class InvoiceFormSubmissionService {
             itemService.save(item);
         }
 
-        sellerTaxpayerId = /*headerEntity.getSellerTaxpayer() != null ? headerEntity.getSellerTaxpayer().getId() :*/ null;
         Integer insValue = headerEntity.getIns() != null ? headerEntity.getIns().getValue() : null;
 
         return new SubmitResult(
