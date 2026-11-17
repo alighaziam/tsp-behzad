@@ -96,15 +96,15 @@ class CurrentUserTaxpayerResolverServiceTest {
     }
 
     private UserTaxpayerEntity association(UUID taxpayerId) {
-        UserTaxpayerEntity association = mock(UserTaxpayerEntity.class);
-        when(association.getTaxpayerId()).thenReturn(taxpayerId);
+        UserTaxpayerEntity association = new UserTaxpayerEntity();
+        association.setTaxpayerId(taxpayerId);
         return association;
     }
 
     private TaxpayerEntity taxpayer(UUID id, boolean active) {
-        TaxpayerEntity taxpayer = mock(TaxpayerEntity.class);
-        when(taxpayer.getId()).thenReturn(id);
-        when(taxpayer.getIsActive()).thenReturn(active);
+        TaxpayerEntity taxpayer = new TaxpayerEntity();
+        taxpayer.setId(id);
+        taxpayer.setIsActive(active);
         return taxpayer;
     }
 }
