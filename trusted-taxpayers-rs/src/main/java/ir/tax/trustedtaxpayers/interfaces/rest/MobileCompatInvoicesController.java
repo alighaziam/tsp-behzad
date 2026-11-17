@@ -30,6 +30,7 @@ public class MobileCompatInvoicesController {
 
 	private final ElectronicInvoiceHeaderService headerService;
 	private final ElectronicInvoiceSystemService systemService;
+	private final ElectronicInvoiceHeaderRepository headerRepository;
 
 	public MobileCompatInvoicesController(ElectronicInvoiceHeaderService headerService,
 	                                      ElectronicInvoiceSystemService systemService,
