@@ -121,10 +121,10 @@ public class MobileCompatController {
             entity.setGroupType(SettingGroupType.GENERAL);
         }
         entity.setUpdatedOn(OffsetDateTime.now());
-        entity.setUpdatedBy("MOBILE_COMPAT");
+        entity.setUpdatedBy(currentActor());
         if (entity.getCreatedOn() == null) {
             entity.setCreatedOn(OffsetDateTime.now());
-            entity.setCreatedBy("MOBILE_COMPAT");
+            entity.setCreatedBy(currentActor());
         }
         settingService.save(entity);
         return ResponseEntity.ok(Map.of("ok", true));
@@ -175,6 +175,12 @@ public class MobileCompatController {
         return ResponseEntity.ok(response);
     }
 
+
+    private String currentActor() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.isAuthenticated()
+                ? authentication.getName() : "UNKNOWN";
+    }
 
     private Map<String, Object> toSettingDto(SettingEntity s) {
         Map<String, Object> m = new HashMap<>();
