@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.tax.trustedtaxpayers.application.service.ElectronicInvoiceHeaderService;
 import ir.tax.trustedtaxpayers.application.service.ElectronicInvoiceSystemService;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceHeaderRepository;
 import ir.tax.trustedtaxpayers.core.spec.FilterRequest;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeaderEntity;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,9 +32,11 @@ public class MobileCompatInvoicesController {
 	private final ElectronicInvoiceSystemService systemService;
 
 	public MobileCompatInvoicesController(ElectronicInvoiceHeaderService headerService,
-	                                      ElectronicInvoiceSystemService systemService) {
+	                                      ElectronicInvoiceSystemService systemService,
+	                                      ElectronicInvoiceHeaderRepository headerRepository) {
 		this.headerService = headerService;
 		this.systemService = systemService;
+		this.headerRepository = headerRepository;
 	}
 
 	private static boolean unauthorized(String auth) {
@@ -41,17 +45,17 @@ public class MobileCompatInvoicesController {
 
 	private Map<String, Object> toMobileSummary(ElectronicInvoiceHeaderEntity h) {
 		String sts = systemService.findByHeaderId(h.getId()).map(sys -> sys.getSts()).orElse(null);
-		return Map.of(
-				"id", h.getId(),
-				"tax_id", h.getTaxId(),
-				"template_code", h.getTemplateCode(),
-				"inty", h.getInty(),
-				"tins", h.getTins(),
-				"tinb", h.getTinb(),
-				"tbill", h.getTbill(),
-				"sts", sts,
-				"created_at", h.getCreatedOn()
-		);
+		Map<String, Object> summary = new HashMap<>();
+		summary.put("id", h.getId());
+		summary.put("tax_id", h.getTaxId());
+		summary.put("template_code", h.getTemplateCode());
+		summary.put("inty", h.getInty());
+		summary.put("tins", h.getTins());
+		summary.put("tinb", h.getTinb());
+		summary.put("tbill", h.getTbill());
+		summary.put("sts", sts);
+		summary.put("created_at", h.getCreatedOn());
+		return summary;
 	}
 
 	@GetMapping
@@ -63,16 +67,21 @@ public class MobileCompatInvoicesController {
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		if (unauthorized(auth)) return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
-		Pageable pageable = PageRequest.of(page, size);
+		int safePage = Math.max(0, page);
+		int safeSize = Math.min(100, Math.max(1, size));
+		Pageable pageable = PageRequest.of(safePage, safeSize);
+		boolean hasTins = tins != null && !tins.isBlank();
+		boolean hasTinb = tinb != null && !tinb.isBlank();
 		Page<ElectronicInvoiceHeaderEntity> result;
-		/*if (tins != null && !tins.isBlank()) {
-			result = headerService.findBySellerTin(tins, pageable);
-		} else if (tinb != null && !tinb.isBlank()) {
-			result = headerService.findByBuyerTin(tinb, pageable);
+		if (hasTins && hasTinb) {
+			result = headerRepository.findByTinsAndTinb(tins.trim(), tinb.trim(), pageable);
+		} else if (hasTins) {
+			result = headerRepository.findByTins(tins.trim(), pageable);
+		} else if (hasTinb) {
+			result = headerRepository.findByTinb(tinb.trim(), pageable);
 		} else {
 			result = headerService.findAll(pageable);
-		}*/
-		result = headerService.findAll(pageable);
+		}
 		return ResponseEntity.ok(Map.of(
 				"items", result.getContent().stream().map(this::toMobileSummary).toList(),
 				"page", result.getNumber(),
@@ -92,14 +101,9 @@ public class MobileCompatInvoicesController {
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		if (unauthorized(auth)) return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
-		List<FilterRequest> filters = new ArrayList<>();
-		if (tax_id != null && !tax_id.isBlank()) filters.add(new FilterRequest("taxId", "=", tax_id));
-		if (tins != null && !tins.isBlank()) filters.add(new FilterRequest("tins", "=", tins));
-		if (tinb != null && !tinb.isBlank()) filters.add(new FilterRequest("tinb", "=", tinb));
-		if (template_code != null && !template_code.isBlank()) filters.add(new FilterRequest("templateCode", "=", template_code));
-        Pageable pageable = PageRequest.of(page, size);
-        // Minimal implementation: defer to findAll(pageable) if custom search not available
-        Page<ElectronicInvoiceHeaderEntity> result = headerService.findAll(pageable);
+		Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)));
+		Page<ElectronicInvoiceHeaderEntity> result = headerRepository.findForMobileSearch(
+				normalize(tax_id), normalize(tins), normalize(tinb), normalize(template_code), pageable);
 		return ResponseEntity.ok(Map.of(
 				"items", result.getContent().stream().map(this::toMobileSummary).toList(),
 				"page", result.getNumber(),
@@ -107,6 +111,11 @@ public class MobileCompatInvoicesController {
 				"total", result.getTotalElements()
 		));
 	}
+
+	private String normalize(String value) {
+		return value == null || value.isBlank() ? null : value.trim();
+	}
+
 }
 
 
