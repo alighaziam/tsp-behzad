@@ -202,11 +202,11 @@ public class InvoiceReportService {
             }
         }
 
-        if (Objects.nonNull(filter) && (filter.taxpayerNo() != null && !filter.taxpayerNo().isBlank())) {
+        if (Objects.nonNull(filter) && filter.taxpayerNo() != null && !filter.taxpayerNo().isBlank()) {
             String pattern = filter.taxpayerNo().trim().toUpperCase(Locale.ROOT);
-           /* Predicate sellerPredicate = cb.equal(cb.upper(seller.get("taxpayerNo")), pattern);
-            Predicate buyerPredicate = cb.equal(cb.upper(buyer.get("taxpayerNo")), pattern);*/
-            /*predicates.add(cb.or(sellerPredicate, buyerPredicate));*/
+            Predicate sellerPredicate = cb.equal(cb.upper(header.get("tins")), pattern);
+            Predicate buyerPredicate = cb.equal(cb.upper(header.get("tinb")), pattern);
+            predicates.add(cb.or(sellerPredicate, buyerPredicate));
         }
 
         if (Objects.nonNull(filter) && filter.statuses() != null && !filter.statuses().isEmpty()) {
