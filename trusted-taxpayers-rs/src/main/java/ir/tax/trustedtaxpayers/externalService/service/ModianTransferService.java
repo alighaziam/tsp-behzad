@@ -1,6 +1,8 @@
 package ir.tax.trustedtaxpayers.externalService.service;
 
 import ir.gov.tax.tpis.sdk.content.api.TaxApi;
+import ir.gov.tax.tpis.sdk.content.dto.InquiryResultModel;
+import ir.gov.tax.tpis.sdk.content.dto.UidAndFiscalId;
 import ir.gov.tax.tpis.sdk.transfer.api.TransferApi;
 import ir.gov.tax.tpis.sdk.transfer.dto.*;
 import ir.gov.tax.tpis.sdk.transfer.exception.TaxApiException;
@@ -173,6 +175,45 @@ public class ModianTransferService {
             throw new RuntimeException("Failed to inquire packet status: " + e.getMessage(), e);
         }
     }*/
+
+    /**
+     * Query the tax authority by the exact persisted packet UID and fiscal ID.
+     * A failed inquiry is propagated so callers can fail closed instead of
+     * risking a duplicate submission with a new UID.
+     */
+    public InquiryResultModel inquiryInvoiceByUid(String uid, String fiscalId) {
+        if (uid == null || uid.isBlank()) {
+            throw new IllegalArgumentException("UID cannot be null or empty");
+        }
+        if (fiscalId == null || fiscalId.isBlank()) {
+            throw new IllegalArgumentException("Fiscal ID cannot be null or empty");
+        }
+        if (taxApi == null) {
+            throw new IllegalStateException("TaxApi bean is not available to perform inquiry");
+        }
+
+        try {
+            if (taxApi.getToken() == null || taxApi.getToken().getToken() == null
+                    || taxApi.getToken().getToken().isBlank()) {
+                taxApi.requestToken();
+            }
+            UidAndFiscalId pair = new UidAndFiscalId();
+            pair.setUid(uid);
+            pair.setFiscalId(fiscalId);
+            List<InquiryResultModel> results =
+                    taxApi.inquiryByUidAndFiscalId(java.util.Collections.singletonList(pair));
+            if (results == null) {
+                return null;
+            }
+            return results.stream()
+                    .filter(result -> result != null && uid.equals(result.getUid()))
+                    .findFirst()
+                    .orElse(null);
+        } catch (TaxApiException e) {
+            logger.error("Invoice inquiry failed for UID {}: {}", uid, e.getMessage(), e);
+            throw new RuntimeException("Failed to inquire invoice packet: " + e.getMessage(), e);
+        }
+    }
 
     /**
      * بررسی پاسخ و استخراج خطاها
