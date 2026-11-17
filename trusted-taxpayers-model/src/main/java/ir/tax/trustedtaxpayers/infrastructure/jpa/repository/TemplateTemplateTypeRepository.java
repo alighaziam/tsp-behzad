@@ -21,6 +21,7 @@ public interface TemplateTemplateTypeRepository extends JpaRepository<TemplateTe
     /**
      * پیدا کردن تمام روابط یک TemplateType
      */
+    @EntityGraph(attributePaths = {"template"})
     List<TemplateTemplateTypeEntity> findByTemplateTypeId(UUID templateTypeId);
     
     /**
