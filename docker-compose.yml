@@ -14,7 +14,7 @@ services:
     volumes:
       - oracle-data:/opt/oracle/oradata
     healthcheck:
-      test: ["CMD-SHELL", "printf 'SELECT 1 FROM DUAL;\\n' | sqlplus -S \"sys/$ORACLE_PWD@localhost:1521/XE as sysdba\" | grep -q 1 || exit 1"]
+      test: ["CMD-SHELL", "printf 'SELECT 1 FROM DUAL;\\n' | sqlplus -S / as sysdba | grep -q 1 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -76,7 +76,7 @@ services:
       # Disable Kafka (not needed for basic deployment)
       APP_KAFKA_ENABLED: false
       
-      # Disable rate limiting (optional, requires Redis)
+      # Keep rate limiting enabled; Redis is required.
       RATE_LIMIT_ENABLED: true
       
       # Spring profile
