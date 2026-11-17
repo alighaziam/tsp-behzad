@@ -16,13 +16,7 @@ spring:
     open-in-view: false
   security:
     oauth2:
-      resourceservice:
-  access:
-    webhook:
-      enabled: ${SERVICE_ACCESS_WEBHOOK_ENABLED:false}
-      allowed-hosts: ${SERVICE_ACCESS_WEBHOOK_ALLOWED_HOSTS:}
-
-server:
+      resourceserver:
         jwt:
           issuer-uri: ${OAUTH2_ISSUER_URI}
           jwk-set-uri: ${OAUTH2_JWK_SET_URI}
@@ -62,6 +56,7 @@ taxpayer-system:
   retry:
     max-attempts: 3
     backoff-delay: 1000
+
 # Production Tax SDK settings: never inherit sandbox endpoints or sample identities.
 tax:
   sdk:
@@ -71,3 +66,10 @@ tax:
     private-key-path: ${TAX_SDK_PRIVATE_KEY_PATH}
     private-key-password: ${TAX_SDK_PRIVATE_KEY_PASSWORD:}
     request-timeout-ms: ${TAX_SDK_REQUEST_TIMEOUT_MS:30000}
+
+# Keep outbound webhooks disabled until an egress proxy with IP pinning is configured.
+service:
+  access:
+    webhook:
+      enabled: ${SERVICE_ACCESS_WEBHOOK_ENABLED:false}
+      allowed-hosts: ${SERVICE_ACCESS_WEBHOOK_ALLOWED_HOSTS:}
