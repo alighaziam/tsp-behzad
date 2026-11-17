@@ -41,6 +41,11 @@ public interface ServiceUsageRepository extends JpaRepository<ServiceUsageEntity
            "WHERE su.taxpayer.id = :taxpayerId AND su.service.id = :serviceId " +
            "AND su.usageDate = :usageDate AND su.usageType = :usageType " +
            "AND (:referenceId IS NULL OR su.referenceId = :referenceId)")
+    @Query("SELECT COALESCE(SUM(su.usageCount), 0) FROM ServiceUsageEntity su "
+            + "WHERE su.usageDate >= :startDate AND su.usageDate <= :endDate")
+    Long sumUsageBetween(@Param("startDate") LocalDate startDate,
+                         @Param("endDate") LocalDate endDate);
+
     Optional<ServiceUsageEntity> findExistingUsage(@Param("taxpayerId") UUID taxpayerId,
                                                    @Param("serviceId") UUID serviceId,
                                                    @Param("usageDate") LocalDate usageDate,
