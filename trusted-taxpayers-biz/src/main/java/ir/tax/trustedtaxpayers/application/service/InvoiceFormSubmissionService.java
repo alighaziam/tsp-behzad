@@ -2,6 +2,7 @@ package ir.tax.trustedtaxpayers.application.service;
 
 import ir.tax.trustedtaxpayers.beans.model.InvoiceType;
 import ir.tax.trustedtaxpayers.enums.InvoiceStatus;
+import ir.tax.trustedtaxpayers.biz.service.InvoiceTransmissionService;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeaderEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceItemEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerEntity;
@@ -27,6 +28,7 @@ public class InvoiceFormSubmissionService {
     private final TaxpayerService taxpayerService;
     private final InvoiceTemplateLoaderService templateLoaderService;
     private final TaxpayerTspContractService contractService;
+    private final InvoiceTransmissionService transmissionService;
 
     public static class SubmitResult {
         public final UUID headerId;
@@ -36,6 +38,8 @@ public class InvoiceFormSubmissionService {
         public final Integer patternNumber;
         public final Integer invoiceSubject;
         public final UUID sellerTaxpayerId;
+        public final String transmissionStatus;
+        public final String transmissionMessage;
 
         public SubmitResult(UUID headerId,
                             String taxId,
@@ -43,7 +47,9 @@ public class InvoiceFormSubmissionService {
                             String templateTypeCode,
                             Integer patternNumber,
                             Integer invoiceSubject,
-                            UUID sellerTaxpayerId) {
+                            UUID sellerTaxpayerId,
+                            String transmissionStatus,
+                            String transmissionMessage) {
             this.headerId = headerId;
             this.taxId = taxId;
             this.templateCode = templateCode;
@@ -51,6 +57,8 @@ public class InvoiceFormSubmissionService {
             this.patternNumber = patternNumber;
             this.invoiceSubject = invoiceSubject;
             this.sellerTaxpayerId = sellerTaxpayerId;
+            this.transmissionStatus = transmissionStatus;
+            this.transmissionMessage = transmissionMessage;
         }
     }
 
@@ -190,7 +198,9 @@ public class InvoiceFormSubmissionService {
                 templateTypeCode,
                 patternNumber,
                 insValue,
-                sellerTaxpayerId
+                sellerTaxpayerId,
+                "DRAFT",
+                "Draft saved successfully"
         );
     }
 
@@ -317,6 +327,11 @@ public class InvoiceFormSubmissionService {
 
         Integer insValue = headerEntity.getIns() != null ? headerEntity.getIns().getValue() : null;
 
+        // The submit operation must actually transmit after the invoice header and
+        // all line items have been persisted in the current transaction.
+        InvoiceTransmissionService.TransmissionResult transmissionResult =
+                transmissionService.transmitInvoice(headerId);
+
         return new SubmitResult(
                 headerId,
                 taxId,
@@ -324,7 +339,9 @@ public class InvoiceFormSubmissionService {
                 templateTypeCode,
                 patternNumber,
                 insValue,
-                sellerTaxpayerId
+                sellerTaxpayerId,
+                transmissionResult.getStatus(),
+                transmissionResult.getMessage()
         );
     }
 
