@@ -42,7 +42,8 @@ public class InvoiceReportService {
             "PENDING",
             "ACCEPTED",
             "REJECTED",
-            "CANCELLED"
+            "CANCELLED",
+            "FAILED"
     );
 
     private final ElectronicInvoiceSystemRepository systemRepository;
@@ -198,7 +199,7 @@ public class InvoiceReportService {
                                                   ) {
         List<Predicate> predicates = new ArrayList<>();
 
-        if (Objects.nonNull(filter) && !filter.taxpayerIds().isEmpty()) {
+        if (Objects.nonNull(filter) && filter.taxpayerIds() != null && !filter.taxpayerIds().isEmpty()) {
             List<String> assignedTaxIds = taxpayerRepository.findAllById(filter.taxpayerIds()).stream()
                     .map(TaxpayerEntity::getTaxId)
                     .filter(Objects::nonNull)
@@ -221,7 +222,7 @@ public class InvoiceReportService {
             /*predicates.add(cb.or(sellerPredicate, buyerPredicate));*/
         }
 
-        if (Objects.nonNull(filter) && !filter.statuses().isEmpty()) {
+        if (Objects.nonNull(filter) && filter.statuses() != null && !filter.statuses().isEmpty()) {
             predicates.add(root.get("sts").in(filter.statuses()));
         }
 
@@ -237,39 +238,42 @@ public class InvoiceReportService {
     }
 
     private InvoiceReportItemDto mapToItemDto(ElectronicInvoiceSystemEntity systemEntity) {
-        return headerRepository.findById(systemEntity.getId())
-                .map(header -> {
-                    String sellerNo = /*header.getSellerTaxpayer() != null ? header.getSellerTaxpayer().getTaxId() : */null;
-                    String sellerName = /*header.getSellerTaxpayer() != null ? header.getSellerTaxpayer().getName() :*/ null;
-                    String buyerNo = /*header.getBuyerTaxpayer() != null ? header.getBuyerTaxpayer().getTaxId() :*/ null;
-                    String buyerName = /*header.getBuyerTaxpayer() != null ? header.getBuyerTaxpayer().getName() :*/ null;
-                    Integer subject = header.getIns() != null ? header.getIns().getValue() : null;
-                    String subjectLabel = header.getIns() != null ? header.getIns().getPersianName() : null;
+        ElectronicInvoiceHeaderEntity header = systemEntity.getHeader();
+        if (header == null) {
+            header = headerRepository.findById(systemEntity.getId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "InvoiceHeader not found for systemEntity id=" + systemEntity.getId()));
+        }
 
-                    return new InvoiceReportItemDto(
-                            header.getId(),
-                            header.getTaxId(),
-                            header.getInno(),
-                            header.getTemplateCode(),
-                            header.getInp(),
-                            subject,
-                            subjectLabel,
-                            sellerNo,
-                            sellerName,
-                            buyerNo,
-                            buyerName,
-                            header.getTbill(),
-                            header.getCreatedOn(),
-                            systemEntity.getSrvdt(),
-                            systemEntity.getSts(),
-                            systemEntity.getRejcode(),
-                            systemEntity.getRejdesc(),
-                            systemEntity.getReferenceNumber()
-                    );
-                })
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "InvoiceHeader not found for systemEntity id=" + systemEntity.getId()
-                ));
+        String sellerNo = header.getTins();
+        String sellerName = sellerNo == null ? null
+                : taxpayerRepository.findByTaxId(sellerNo).map(TaxpayerEntity::getName).orElse(null);
+        String buyerNo = header.getTinb();
+        String buyerName = buyerNo == null ? null
+                : taxpayerRepository.findByTaxId(buyerNo).map(TaxpayerEntity::getName).orElse(null);
+        Integer subject = header.getIns() != null ? header.getIns().getValue() : null;
+        String subjectLabel = header.getIns() != null ? header.getIns().getPersianName() : null;
+
+        return new InvoiceReportItemDto(
+                header.getId(),
+                header.getTaxId(),
+                header.getInno(),
+                header.getTemplateCode(),
+                header.getInp(),
+                subject,
+                subjectLabel,
+                sellerNo,
+                sellerName,
+                buyerNo,
+                buyerName,
+                header.getTbill(),
+                header.getCreatedOn(),
+                systemEntity.getSrvdt(),
+                systemEntity.getSts(),
+                systemEntity.getRejcode(),
+                systemEntity.getRejdesc(),
+                systemEntity.getReferenceNumber()
+        );
     }
 
 
@@ -278,40 +282,42 @@ public class InvoiceReportService {
         CriteriaQuery<Tuple> cq = cb.createTupleQuery();
         Root<ElectronicInvoiceSystemEntity> root = cq.from(ElectronicInvoiceSystemEntity.class);
         Join<ElectronicInvoiceSystemEntity, ElectronicInvoiceHeaderEntity> header = root.join("header", JoinType.INNER);
-        Join<ElectronicInvoiceHeaderEntity, TaxpayerEntity> seller = header.join("sellerTaxpayer", JoinType.LEFT);
-        Join<ElectronicInvoiceHeaderEntity, TaxpayerEntity> buyer = header.join("buyerTaxpayer", JoinType.LEFT);
 
-        /*List<Predicate> predicates = buildCommonPredicates(filter, cb, root, header, seller, buyer);*/
         List<Predicate> predicates = buildCommonPredicates(filter, cb, root, header);
-        /*cq.multiselect(root.get("sts"), cb.count(root), cb.sum(header.get("tbill")));*/
+        cq.multiselect(
+                root.get("sts").alias("status"),
+                cb.count(root).alias("invoiceCount"),
+                cb.sum(header.get("tbill")).alias("totalAmount")
+        );
         if (!predicates.isEmpty()) {
             cq.where(predicates.toArray(Predicate[]::new));
         }
-        /*cq.groupBy(root.get("sts"));*/
+        cq.groupBy(root.get("sts"));
 
-        List<Tuple> tuples = entityManager.createQuery(cq).getResultList();
-        Map<String, InvoiceStatusSummaryDto> map = tuples.stream().collect(Collectors.toMap(
-                tuple -> {
-                    String status = tuple.get(0, String.class);
-                    return status != null ? status : "UNKNOWN";
-                },
-                tuple -> new InvoiceStatusSummaryDto(
-                        tuple.get(0, String.class) != null ? tuple.get(0, String.class) : "UNKNOWN",
-                        tuple.get(1, Long.class),
-                        toBigDecimal(tuple.get(2))
-                )
-        ));
+        Map<String, InvoiceStatusSummaryDto> map = entityManager.createQuery(cq).getResultList().stream()
+                .collect(Collectors.toMap(
+                        tuple -> {
+                            String status = tuple.get("status", String.class);
+                            return status != null ? status : "UNKNOWN";
+                        },
+                        tuple -> {
+                            String status = tuple.get("status", String.class);
+                            Long count = tuple.get("invoiceCount", Long.class);
+                            BigDecimal total = tuple.get("totalAmount", BigDecimal.class);
+                            return new InvoiceStatusSummaryDto(
+                                    status != null ? status : "UNKNOWN",
+                                    count != null ? count : 0L,
+                                    total != null ? total : BigDecimal.ZERO
+                            );
+                        },
+                        (first, second) -> first
+                ));
 
         List<InvoiceStatusSummaryDto> result = new ArrayList<>();
         for (String status : KNOWN_STATUSES) {
-            InvoiceStatusSummaryDto existing = map.get(status);
-            if (existing != null) {
-                result.add(existing);
-            } else {
-                result.add(new InvoiceStatusSummaryDto(status, 0, BigDecimal.ZERO));
-            }
+            result.add(map.getOrDefault(status,
+                    new InvoiceStatusSummaryDto(status, 0L, BigDecimal.ZERO)));
         }
-        // add any unknown statuses that may exist
         map.forEach((status, summary) -> {
             if (!KNOWN_STATUSES.contains(status)) {
                 result.add(summary);
@@ -319,6 +325,7 @@ public class InvoiceReportService {
         });
         return result;
     }
+
 
     private static String quote(Object value) {
         if (value == null) {
