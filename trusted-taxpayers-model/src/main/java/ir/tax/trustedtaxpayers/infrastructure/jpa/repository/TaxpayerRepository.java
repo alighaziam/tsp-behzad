@@ -34,6 +34,15 @@ public interface TaxpayerRepository extends BaseRepository<TaxpayerEntity, UUID>
     Optional<TaxpayerEntity> findByTaxId(String taxId);
 
     List<TaxpayerEntity> findByTaxIdIn(Collection<String> taxIds);
+    @Query("""
+            SELECT t FROM TaxpayerEntity t
+            WHERE t.isActive = true
+              AND (:q IS NULL OR UPPER(t.taxId) LIKE CONCAT(CONCAT('%', UPPER(:q)), '%')
+                   OR UPPER(t.name) LIKE CONCAT(CONCAT('%', UPPER(:q)), '%'))
+            """)
+    Page<TaxpayerEntity> findForMobileSearch(@Param("q") String query, Pageable pageable);
+
+
     
     Optional<TaxpayerEntity> findByNationalId(String nationalId);
     
