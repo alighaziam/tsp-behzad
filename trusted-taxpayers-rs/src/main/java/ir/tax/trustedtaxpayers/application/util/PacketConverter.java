@@ -25,7 +25,13 @@ public class PacketConverter {
      * تبدیل Invoice Header به PacketDto
      */
     public PacketDto convertInvoiceToPacket(ElectronicInvoiceHeaderEntity invoice, String packetType) {
-        String uid = UUID.randomUUID().toString();
+        return convertInvoiceToPacket(invoice, packetType, UUID.randomUUID().toString());
+    }
+
+    public PacketDto convertInvoiceToPacket(ElectronicInvoiceHeaderEntity invoice, String packetType, String uid) {
+        if (uid == null || uid.isBlank()) {
+            throw new IllegalArgumentException("Packet UID must not be blank");
+        }
         // استفاده از Tins به عنوان FiscalId در صورت عدم وجود FiscalId
         String fiscalId = invoice.getTins();
         
