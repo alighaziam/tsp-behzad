@@ -2,7 +2,9 @@ package ir.tax.trustedtaxpayers.application.service;
 
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.UserTaxpayerEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.UserEntity;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TaxpayerEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.UserTaxpayerRepository;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TaxpayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 public class CurrentUserTaxpayerResolverService {
 
     private final UserTaxpayerRepository userTaxpayerRepository;
+    private final TaxpayerRepository taxpayerRepository;
     private final UserRoleService userRoleService;
 
     /**
@@ -84,10 +87,12 @@ public class CurrentUserTaxpayerResolverService {
             return Optional.empty();
         }
         
-        // Return the first taxpayer ID
-        UUID primaryTaxpayerId = taxpayerIds.iterator().next();
-        log.debug("Primary taxpayer ID for current user: {}", primaryTaxpayerId);
-        return Optional.of(primaryTaxpayerId);
+        // Never guess which taxpayer is primary when multiple associations exist.
+        if (taxpayerIds.size() != 1) {
+            log.warn("Current user has {} associated taxpayers; primary taxpayer is ambiguous", taxpayerIds.size());
+            return Optional.empty();
+        }
+        return Optional.of(taxpayerIds.iterator().next());
     }
 
     /**
@@ -103,8 +108,17 @@ public class CurrentUserTaxpayerResolverService {
             return Set.of();
         }
 
-        return userTaxpayerRepository.findAllByUserId(userId).stream()
+        Set<UUID> assignedIds = userTaxpayerRepository.findAllByUserId(userId).stream()
+                .filter(association -> Boolean.TRUE.equals(association.getIsActive()))
                 .map(UserTaxpayerEntity::getTaxpayerId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (assignedIds.isEmpty()) {
+            return Set.of();
+        }
+        return taxpayerRepository.findAllById(assignedIds).stream()
+                .filter(taxpayer -> Boolean.TRUE.equals(taxpayer.getIsActive()))
+                .map(TaxpayerEntity::getId)
                 .collect(Collectors.toUnmodifiableSet());
     }
 
