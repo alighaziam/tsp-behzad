@@ -12,11 +12,8 @@ COPY trusted-taxpayers-model/pom.xml trusted-taxpayers-model/
 COPY trusted-taxpayers-biz/pom.xml trusted-taxpayers-biz/
 COPY trusted-taxpayers-rs/pom.xml trusted-taxpayers-rs/
 
-# Copy Maven settings to skip internal repository
-COPY .mvn/settings.xml /root/.m2/settings.xml
-
 # Download dependencies with timeout settings
-RUN mvn dependency:go-offline -B || true
+RUN mvn dependency:go-offline -B
 
 # Copy source code
 COPY . .
