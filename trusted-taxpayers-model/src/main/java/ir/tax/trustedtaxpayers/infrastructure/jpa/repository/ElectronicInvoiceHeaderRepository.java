@@ -3,6 +3,8 @@ package ir.tax.trustedtaxpayers.infrastructure.jpa.repository;
 import ir.tax.trustedtaxpayers.core.repository.BaseRepository;
 
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeaderEntity;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -16,6 +18,11 @@ import java.util.UUID;
 
 @Repository
 public interface ElectronicInvoiceHeaderRepository extends BaseRepository<ElectronicInvoiceHeaderEntity, UUID> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT h FROM ElectronicInvoiceHeaderEntity h WHERE h.id = :invoiceId")
+    Optional<ElectronicInvoiceHeaderEntity> findByIdForTransmission(@Param("invoiceId") UUID invoiceId);
+
     
    /* @EntityGraph(attributePaths = {"sellerTaxpayer", "buyerTaxpayer", "template"})
     Optional<ElectronicInvoiceHeaderEntity> findByTaxId(String taxId);
