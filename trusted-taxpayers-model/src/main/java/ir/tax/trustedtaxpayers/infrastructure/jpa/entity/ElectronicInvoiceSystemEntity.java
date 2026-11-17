@@ -1,10 +1,13 @@
 package ir.tax.trustedtaxpayers.infrastructure.jpa.entity;
 
 import ir.tax.trustedtaxpayers.core.entity.BaseEntity;
+import ir.tax.trustedtaxpayers.core.util.RawUuidConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
+
+import java.sql.Types;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -33,6 +36,12 @@ public class ElectronicInvoiceSystemEntity extends BaseEntity {
 
     @Column(name = "SIGN", length = 250)
     private String sign;
+
+    /** Stable packet UID reused across retries and process restarts. */
+    @JdbcTypeCode(Types.BINARY)
+    @Convert(converter = RawUuidConverter.class)
+    @Column(name = "UNIQUE_ID", columnDefinition = "RAW(16)")
+    private UUID uniqueId;
 
     @Column(name = "CERT", length = 250)
     private String cert;
