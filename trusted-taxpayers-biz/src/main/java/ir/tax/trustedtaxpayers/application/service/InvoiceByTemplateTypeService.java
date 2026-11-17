@@ -4,8 +4,11 @@ import ir.tax.trustedtaxpayers.application.cache.CacheEvict;
 import ir.tax.trustedtaxpayers.application.cache.Cacheable;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceHeaderEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TemplateEntity;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TemplateTemplateTypeEntity;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.TemplateTypeEntity;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceHeaderRepository;
-import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TemplateRepository;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TemplateTemplateTypeRepository;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TemplateTypeRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -15,192 +18,93 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
- * سرویس برای لود کردن صورتحساب‌ها بر اساس نوع الگو (TemplateType)
- * 
- * <p>این سرویس برای لود کردن صورتحساب‌ها بر اساس نوع الگو (TemplateType) استفاده می‌شود.</p>
- * 
- * <p>ویژگی‌ها:</p>
- * <ul>
- *   <li>Cache برای عملکرد بهتر</li>
- *   <li>پشتیبانی از صفحه‌بندی</li>
- *   <li>Eager loading برای جلوگیری از N+1</li>
- *   <li>فیلتر بر اساس کد TemplateType</li>
- * </ul>
- * 
- * @author Ghazi-a
- * @since 1.0
+ * Loads invoices using the normalized TEMPLATE <-> TEMPLATE_TYPE association.
  */
 @Service
 public class InvoiceByTemplateTypeService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(InvoiceByTemplateTypeService.class);
-    
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdOn", "updatedOn", "taxId", "indatim", "tbill", "templateCode"
+    );
+
     private final ElectronicInvoiceHeaderRepository invoiceRepository;
-    private final TemplateRepository templateRepository;
-    
+    private final TemplateTypeRepository templateTypeRepository;
+    private final TemplateTemplateTypeRepository templateTemplateTypeRepository;
+
     public InvoiceByTemplateTypeService(
             ElectronicInvoiceHeaderRepository invoiceRepository,
-            TemplateRepository templateRepository) {
+            TemplateTypeRepository templateTypeRepository,
+            TemplateTemplateTypeRepository templateTemplateTypeRepository) {
         this.invoiceRepository = invoiceRepository;
-        this.templateRepository = templateRepository;
+        this.templateTypeRepository = templateTypeRepository;
+        this.templateTemplateTypeRepository = templateTemplateTypeRepository;
     }
 
-    /**
-     * لود کردن صورتحساب‌ها بر اساس TemplateType code با pagination
-     * 
-     * @param templateTypeCode کد نوع الگو (مثل P01, P02, ...)
-     * @param page شماره صفحه (0-based)
-     * @param size تعداد آیتم در هر صفحه
-     * @param sortBy فیلد برای sort
-     * @param direction جهت sort (ASC/DESC)
-     * @return Page از صورتحساب‌ها
-     */
     @Cacheable(cacheName = "invoices-by-template-type", keyPrefix = "template-type-page")
     @Transactional(readOnly = true)
     public Page<ElectronicInvoiceHeaderEntity> loadInvoicesByTemplateType(
-            String templateTypeCode,
-            Integer page,
-            Integer size,
-            String sortBy,
-            String direction) {
-        
-        if (templateTypeCode == null || templateTypeCode.isBlank()) {
-            logger.warn("TemplateTypeCode is null or empty, returning empty page");
+            String templateTypeCode, Integer page, Integer size, String sortBy, String direction) {
+        List<String> templateCodes = resolveActiveTemplateCodes(templateTypeCode);
+        if (templateCodes.isEmpty()) {
             return Page.empty();
         }
-        
-        // توجه: findByTemplateTypeCodeAndIsActiveTrue دیگر وجود ندارد چون templateTypeCode از TemplateEntity حذف شده است
-        // این سرویس نیاز به بازنویسی دارد تا بدون templateTypeCode در TemplateEntity کار کند
-        // فعلاً لیست خالی برمی‌گردانیم چون دیگر نمی‌توان templateTypeCode را از TemplateEntity جستجو کرد
-        List<TemplateEntity> templates = Collections.emptyList();
-        
-        if (templates.isEmpty()) {
-            logger.debug("No active templates found for templateTypeCode: {}", templateTypeCode);
-            return Page.empty();
-        }
-        
-        // استخراج template codes
-        List<String> templateCodes = templates.stream()
-            .map(TemplateEntity::getCode)
-            .toList();
-        
-        // ساخت Pageable
-        Sort sort = buildSort(sortBy, direction);
-        int validPage = page != null && page >= 0 ? page : 0;
-        int validSize = size != null && size > 0 ? Math.min(size, 100) : 20;
-        Pageable pageable = PageRequest.of(validPage, validSize, sort);
-        
-        Page<ElectronicInvoiceHeaderEntity> invoices = findInvoicesByTemplateCodes(templateCodes, pageable);
-        
-        logger.debug("Loaded {} invoices for templateTypeCode={}, page={}, size={}", 
-            invoices.getTotalElements(), templateTypeCode, page, size);
-        
+        int safePage = page == null ? 0 : Math.max(0, page);
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, 100);
+        Pageable pageable = PageRequest.of(safePage, safeSize, buildSort(sortBy, direction));
+        Page<ElectronicInvoiceHeaderEntity> invoices =
+                invoiceRepository.findByTemplateCodeIn(templateCodes, pageable);
+        logger.debug("Loaded {} invoices for templateTypeCode={}, page={}, size={}",
+                invoices.getTotalElements(), templateTypeCode, safePage, safeSize);
         return invoices;
     }
 
-    /**
-     * لود کردن صورتحساب‌ها بر اساس TemplateType code (بدون pagination)
-     * 
-     * @param templateTypeCode کد نوع الگو
-     * @return لیست صورتحساب‌ها
-     */
     @Cacheable(cacheName = "invoices-by-template-type-list", keyPrefix = "template-type")
     @Transactional(readOnly = true)
     public List<ElectronicInvoiceHeaderEntity> loadInvoicesByTemplateType(String templateTypeCode) {
-        if (templateTypeCode == null || templateTypeCode.isBlank()) {
-            return Collections.emptyList();
-        }
-        
-        // توجه: findByTemplateTypeCodeAndIsActiveTrue دیگر وجود ندارد چون templateTypeCode از TemplateEntity حذف شده است
-        // این سرویس نیاز به بازنویسی دارد تا بدون templateTypeCode در TemplateEntity کار کند
-        // فعلاً لیست خالی برمی‌گردانیم چون دیگر نمی‌توان templateTypeCode را از TemplateEntity جستجو کرد
-        List<TemplateEntity> templates = Collections.emptyList();
-        
-        if (templates.isEmpty()) {
-            return Collections.emptyList();
-        }
-        
-        // استخراج template codes
-        List<String> templateCodes = templates.stream()
-            .map(TemplateEntity::getCode)
-            .toList();
-        
-        // استفاده از متد بهینه شده با IN clause
-        // Using paginated version instead of deprecated method
-        /*return invoiceRepository.findByTemplateCodeIn(templateCodes, Pageable.unpaged()).getContent();*/
-        return null;
+        List<String> templateCodes = resolveActiveTemplateCodes(templateTypeCode);
+        return templateCodes.isEmpty()
+                ? List.of()
+                : invoiceRepository.findByTemplateCodeIn(templateCodes);
     }
 
-   /* *//**
-     * تعداد صورتحساب‌ها بر اساس TemplateType code
-     * 
-     * @param templateTypeCode کد نوع الگو
-     * @return تعداد صورتحساب‌ها
-     *//*
     @Cacheable(cacheName = "invoice-count-by-template-type", keyPrefix = "count")
     @Transactional(readOnly = true)
     public long countInvoicesByTemplateType(String templateTypeCode) {
+        List<String> templateCodes = resolveActiveTemplateCodes(templateTypeCode);
+        return templateCodes.isEmpty() ? 0 : invoiceRepository.countByTemplateCodeIn(templateCodes);
+    }
+
+    private List<String> resolveActiveTemplateCodes(String templateTypeCode) {
         if (templateTypeCode == null || templateTypeCode.isBlank()) {
-            return 0;
+            return List.of();
         }
-        
-        List<TemplateEntity> templates = templateRepository.findByTemplateTypeCodeAndIsActiveTrue(templateTypeCode);
-        
-        if (templates.isEmpty()) {
-            return 0;
+        TemplateTypeEntity templateType = templateTypeRepository.findByCode(templateTypeCode.trim())
+                .filter(type -> Boolean.TRUE.equals(type.getIsActive()))
+                .orElse(null);
+        if (templateType == null) {
+            return List.of();
         }
-        
-        List<String> templateCodes = templates.stream()
-            .map(TemplateEntity::getCode)
-            .toList();
-        
-        if (templateCodes.size() == 1) {
-            return invoiceRepository.countByTemplateCode(templateCodes.get(0));
-        }
-        
-        // استفاده از متد بهینه شده
-        return invoiceRepository.countByTemplateCodeIn(templateCodes);
-    }
-*/
-    /**
-     * پیدا کردن invoices بر اساس template codes با pagination
-     * این متد از query بهینه با IN clause استفاده می‌کند
-     */
-    private Page<ElectronicInvoiceHeaderEntity> findInvoicesByTemplateCodes(
-            List<String> templateCodes,
-            Pageable pageable) {
-        
-        // اگر فقط یک template code داریم، از متد مستقیم استفاده می‌کنیم
-        if (templateCodes.size() == 1) {
-            /*return invoiceRepository.findByTemplateCode(templateCodes.get(0), pageable);*/
-        }
-        
-        // برای چندین template code، از متد بهینه شده با IN clause استفاده می‌کنیم
-       /* return invoiceRepository.findByTemplateCodeIn(templateCodes, pageable);*/
-        return null;
+        return templateTemplateTypeRepository.findByTemplateTypeId(templateType.getId()).stream()
+                .map(TemplateTemplateTypeEntity::getTemplate)
+                .filter(template -> template != null && Boolean.TRUE.equals(template.getIsActive()))
+                .map(TemplateEntity::getCode)
+                .filter(code -> code != null && !code.isBlank())
+                .distinct()
+                .toList();
     }
 
-    /**
-     * ساخت Sort object
-     */
     private Sort buildSort(String sortBy, String direction) {
-        Sort.Direction sortDirection = Sort.Direction.ASC;
-        if (direction != null && direction.trim().equalsIgnoreCase("DESC")) {
-            sortDirection = Sort.Direction.DESC;
-        }
-        
-        String validSortBy = sortBy != null && !sortBy.isBlank() ? sortBy : "createdOn";
-        return Sort.by(sortDirection, validSortBy);
+        String field = sortBy != null && ALLOWED_SORT_FIELDS.contains(sortBy) ? sortBy : "createdOn";
+        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction)
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
+        return Sort.by(sortDirection, field);
     }
 
-    /**
-     * Invalidate cache برای یک TemplateType
-     * استفاده از @CacheEvict با allEntries=true برای پاک کردن تمام cache entries
-     */
     @CacheEvict(cacheName = "invoices-by-template-type", allEntries = true)
     @CacheEvict(cacheName = "invoices-by-template-type-list", allEntries = true)
     @CacheEvict(cacheName = "invoice-count-by-template-type", allEntries = true)
@@ -208,9 +112,6 @@ public class InvoiceByTemplateTypeService {
         logger.debug("Cache invalidated for templateTypeCode: {}", templateTypeCode);
     }
 
-    /**
-     * Invalidate تمام cache ها
-     */
     @CacheEvict(cacheName = "invoices-by-template-type", allEntries = true)
     @CacheEvict(cacheName = "invoices-by-template-type-list", allEntries = true)
     @CacheEvict(cacheName = "invoice-count-by-template-type", allEntries = true)
@@ -218,5 +119,3 @@ public class InvoiceByTemplateTypeService {
         logger.info("All invoice by template type caches invalidated");
     }
 }
-
-
