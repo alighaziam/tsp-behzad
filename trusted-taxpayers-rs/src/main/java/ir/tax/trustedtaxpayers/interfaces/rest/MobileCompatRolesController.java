@@ -47,6 +47,7 @@ public class MobileCompatRolesController {
 
 	public record AssignRequest(@NotNull UUID user_id, @NotBlank String role) {}
 
+	@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
 	@PostMapping("/assign")
 	@Operation(summary = "Assign role to user")
 	public ResponseEntity<?> assignRole(
