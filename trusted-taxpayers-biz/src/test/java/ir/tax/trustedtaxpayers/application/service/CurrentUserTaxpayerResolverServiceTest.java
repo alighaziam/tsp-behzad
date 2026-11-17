@@ -75,8 +75,10 @@ class CurrentUserTaxpayerResolverServiceTest {
         UserTaxpayerEntity secondAssociation = association(secondId);
         when(associationRepository.findAllByUserId(userId))
                 .thenReturn(List.of(firstAssociation, secondAssociation));
+        TaxpayerEntity firstTaxpayer = taxpayer(firstId, true);
+        TaxpayerEntity secondTaxpayer = taxpayer(secondId, true);
         when(taxpayerRepository.findAllById(Set.of(firstId, secondId)))
-                .thenReturn(List.of(taxpayer(firstId, true), taxpayer(secondId, true)));
+                .thenReturn(List.of(firstTaxpayer, secondTaxpayer));
 
         assertTrue(service.findCurrentUserPrimaryTaxpayerId().isEmpty());
     }
@@ -86,8 +88,9 @@ class CurrentUserTaxpayerResolverServiceTest {
         UUID taxpayerId = UUID.randomUUID();
         UserTaxpayerEntity taxpayerAssociation = association(taxpayerId);
         when(associationRepository.findAllByUserId(userId)).thenReturn(List.of(taxpayerAssociation));
+        TaxpayerEntity taxpayer = taxpayer(taxpayerId, true);
         when(taxpayerRepository.findAllById(Set.of(taxpayerId)))
-                .thenReturn(List.of(taxpayer(taxpayerId, true)));
+                .thenReturn(List.of(taxpayer));
 
         assertEquals(Optional.of(taxpayerId), service.findCurrentUserPrimaryTaxpayerId());
     }
