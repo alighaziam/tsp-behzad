@@ -59,7 +59,6 @@ public class OAuth2ResourceServerConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/actuator/health",
-                                "/api/base-info/**"
                         ).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(AbstractHttpConfigurer::disable)
