@@ -2,11 +2,13 @@ package ir.tax.trustedtaxpayers.infrastructure.jpa.repository;
 
 import ir.tax.trustedtaxpayers.core.repository.BaseRepository;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.ElectronicInvoiceSystemEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,10 @@ import java.util.UUID;
 @Repository
 public interface ElectronicInvoiceSystemRepository extends BaseRepository<ElectronicInvoiceSystemEntity, UUID> {
     Optional<ElectronicInvoiceSystemEntity> findByHeaderId(UUID headerId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM ElectronicInvoiceSystemEntity s WHERE s.id = :headerId")
+    Optional<ElectronicInvoiceSystemEntity> findByHeaderIdForUpdate(@Param("headerId") UUID headerId);
     /*Optional<ElectronicInvoiceSystemEntity> findByUniqueId(UUID uniqueId);*/
     Optional<ElectronicInvoiceSystemEntity> findByReferenceNumber(String referenceNumber);
     List<ElectronicInvoiceSystemEntity> findBySts(String sts);
