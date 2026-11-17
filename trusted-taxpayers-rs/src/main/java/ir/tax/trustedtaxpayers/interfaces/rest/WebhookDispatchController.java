@@ -15,7 +15,7 @@ import java.util.Map;
  * proxy with destination pinning and redirect protection is available.
  */
 @RestController
-@RequestMapping("/mobile-compat/api/webhooks")
+@RequestMapping("/api/webhooks")
 @PreAuthorize("hasAuthority('ADMIN')")
 @Tag(name = "Mobile-Compat Webhooks", description = "Webhook dispatch is disabled pending secure egress controls")
 public class WebhookDispatchController {
