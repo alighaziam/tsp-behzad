@@ -31,6 +31,22 @@ public interface ElectronicInvoiceHeaderRepository extends BaseRepository<Electr
     Page<ElectronicInvoiceHeaderEntity> findByTemplateCode(String templateCode, Pageable pageable);
     
     @EntityGraph(attributePaths = {"sellerTaxpayer", "buyerTaxpayer", "template"})
+    Page<ElectronicInvoiceHeaderEntity> findByTinsAndTinb(String tins, String tinb, Pageable pageable);
+
+    @Query("""
+            SELECT h FROM ElectronicInvoiceHeaderEntity h
+            WHERE (:taxId IS NULL OR UPPER(h.taxId) = UPPER(:taxId))
+              AND (:tins IS NULL OR UPPER(h.tins) = UPPER(:tins))
+              AND (:tinb IS NULL OR UPPER(h.tinb) = UPPER(:tinb))
+              AND (:templateCode IS NULL OR UPPER(h.templateCode) = UPPER(:templateCode))
+            """)
+    Page<ElectronicInvoiceHeaderEntity> findForMobileSearch(
+            @Param("taxId") String taxId,
+            @Param("tins") String tins,
+            @Param("tinb") String tinb,
+            @Param("templateCode") String templateCode,
+            Pageable pageable);
+
     Page<ElectronicInvoiceHeaderEntity> findByTins(String tins, Pageable pageable);
     
     @EntityGraph(attributePaths = {"sellerTaxpayer", "buyerTaxpayer", "template"})
