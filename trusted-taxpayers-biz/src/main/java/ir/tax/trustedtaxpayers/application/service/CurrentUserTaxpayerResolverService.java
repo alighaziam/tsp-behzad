@@ -108,8 +108,8 @@ public class CurrentUserTaxpayerResolverService {
             return Set.of();
         }
 
+        // An association row is active by existence; this table has no active flag.
         Set<UUID> assignedIds = userTaxpayerRepository.findAllByUserId(userId).stream()
-                .filter(association -> Boolean.TRUE.equals(association.getIsActive()))
                 .map(UserTaxpayerEntity::getTaxpayerId)
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toSet());
