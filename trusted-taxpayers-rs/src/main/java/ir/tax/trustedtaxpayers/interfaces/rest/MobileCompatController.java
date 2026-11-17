@@ -4,7 +4,7 @@ import ir.tax.trustedtaxpayers.application.security.JwtService;
 import ir.tax.trustedtaxpayers.application.rate.RateLimited;
 import org.springframework.security.access.prepost.PreAuthorize;
 import ir.tax.trustedtaxpayers.application.service.SettingService;
-import ir.tax.trustedtaxpayers.application.service.TaxpayerService;
+import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.TaxpayerRepository;
 import ir.tax.trustedtaxpayers.application.service.UserAuthenticationService;
 import ir.tax.trustedtaxpayers.enums.SettingGroupType;
 import ir.tax.trustedtaxpayers.infrastructure.jpa.entity.SettingEntity;
@@ -32,16 +32,16 @@ public class MobileCompatController {
 
     private static final long ACCESS_TOKEN_TTL_MS = 3_600_000L;
 
-    private final TaxpayerService taxpayerService;
+    private final TaxpayerRepository taxpayerRepository;
     private final SettingService settingService;
     private final UserAuthenticationService authenticationService;
     private final JwtService jwtService;
 
-    public MobileCompatController(TaxpayerService taxpayerService,
+    public MobileCompatController(TaxpayerRepository taxpayerRepository,
                                   SettingService settingService,
                                   UserAuthenticationService authenticationService,
                                   JwtService jwtService) {
-        this.taxpayerService = taxpayerService;
+        this.taxpayerRepository = taxpayerRepository;
         this.settingService = settingService;
         this.authenticationService = authenticationService;
         this.jwtService = jwtService;
@@ -142,37 +142,39 @@ public class MobileCompatController {
         if (!MobileCompatSecurity.isAuthenticated()) {
             return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
         }
-        int p = Math.max(1, page) - 1;
-        int size = Math.min(200, Math.max(1, pageSize));
-        Sort.Direction dir = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        String sortProp = switch (sort) {
+        int safePage = Math.max(1, page) - 1;
+        int safeSize = Math.min(100, Math.max(1, pageSize));
+        Sort.Direction direction = "ASC".equalsIgnoreCase(order)
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String sortProperty = switch (sort) {
             case "national_id" -> "nationalId";
             case "name" -> "name";
             case "is_active" -> "isActive";
             case "created_at" -> "createdOn";
             default -> "id";
         };
-        Pageable pageable = PageRequest.of(p, size, Sort.by(dir, sortProp));
-        Page<TaxpayerEntity> result;
-        if (q != null && !q.isBlank()) {
-            var list = taxpayerService.search(q, size, p);
-            result = new org.springframework.data.domain.PageImpl<>(list, pageable, list.size());
-        } else {
-            result = taxpayerService.findAll(pageable);
-        }
-        Map<String, Object> resp = new HashMap<>();
-        resp.put("items", result.getContent().stream().map(t -> Map.of(
-                "id", t.getId(),
-                "national_id", t.getNationalId() != null ? t.getNationalId() : "",
-                "taxpayer_no", t.getTaxId() != null ? t.getTaxId() : "",
-                "name", t.getName() != null ? t.getName() : "",
-                "is_active", Boolean.TRUE.equals(t.getIsActive())
-        )).toList());
-        resp.put("page", page);
-        resp.put("pageSize", size);
-        resp.put("total", result.getTotalElements());
-        return ResponseEntity.ok(resp);
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(direction, sortProperty));
+        String query = q == null || q.isBlank() ? null : q.trim();
+        Page<TaxpayerEntity> result = taxpayerRepository.findForMobileSearch(query, pageable);
+
+        List<Map<String, Object>> items = result.getContent().stream().map(t -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", t.getId());
+            item.put("national_id", t.getNationalId());
+            item.put("taxpayer_no", t.getTaxId());
+            item.put("name", t.getName());
+            item.put("is_active", Boolean.TRUE.equals(t.getIsActive()));
+            return item;
+        }).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("items", items);
+        response.put("page", result.getNumber() + 1);
+        response.put("pageSize", result.getSize());
+        response.put("total", result.getTotalElements());
+        return ResponseEntity.ok(response);
     }
+
 
     private Map<String, Object> toSettingDto(SettingEntity s) {
         Map<String, Object> m = new HashMap<>();
