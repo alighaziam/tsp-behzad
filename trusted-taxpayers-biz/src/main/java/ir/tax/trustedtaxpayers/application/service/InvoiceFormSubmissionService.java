@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -57,6 +58,7 @@ public class InvoiceFormSubmissionService {
      * ذخیره صورتحساب به عنوان پیش‌نویس (بدون validation کامل)
      * Save invoice as draft (without full validation)
      */
+    @Transactional
     public SubmitResult saveDraft(Integer patternNumber, Map<String, Object> header, List<Map<String, Object>> items) {
         if (header == null) header = new HashMap<>();
         if (items == null) items = new ArrayList<>();
@@ -144,7 +146,7 @@ public class InvoiceFormSubmissionService {
         headerEntity.setTvop(getBigDecimal(header.get("tvop")));
 
         // seller/buyer taxpayers (optional for draft)
-        ensureSellerBuyer(headerEntity);
+        UUID sellerTaxpayerId = resolveSellerTaxpayerId(headerEntity, false);
 
         // برای پیش‌نویس، قرارداد را چک نمی‌کنیم
         // 2) save header (بدون validation کامل)
@@ -179,7 +181,6 @@ public class InvoiceFormSubmissionService {
             itemService.save(item);
         }
 
-        UUID sellerTaxpayerId = /*headerEntity.getSellerTaxpayer() != null ? headerEntity.getSellerTaxpayer().getId() :*/ null;
         Integer insValue = headerEntity.getIns() != null ? headerEntity.getIns().getValue() : null;
 
         return new SubmitResult(
@@ -193,6 +194,7 @@ public class InvoiceFormSubmissionService {
         );
     }
 
+    @Transactional
     public SubmitResult submit(Integer patternNumber, Map<String, Object> header, List<Map<String, Object>> items) {
         if (header == null) header = new HashMap<>();
         if (items == null) items = new ArrayList<>();
@@ -269,9 +271,7 @@ public class InvoiceFormSubmissionService {
         headerEntity.setTvop(getBigDecimal(header.get("tvop")));
 
         // seller/buyer taxpayers
-        ensureSellerBuyer(headerEntity);
-
-        UUID sellerTaxpayerId = /*headerEntity.getSellerTaxpayer() != null ? headerEntity.getSellerTaxpayer().getId() :*/ null;
+        UUID sellerTaxpayerId = resolveSellerTaxpayerId(headerEntity, true);
         if (sellerTaxpayerId != null) {
             boolean hasActiveContract = contractService.findActiveContract(sellerTaxpayerId).isPresent();
             if (!hasActiveContract) {
@@ -329,56 +329,26 @@ public class InvoiceFormSubmissionService {
         );
     }
 
-    private void ensureSellerBuyer(ElectronicInvoiceHeaderEntity headerEntity) {
-        // Seller (required) - استفاده از tins (شناسه اقتصادی فروشنده)
+    private UUID resolveSellerTaxpayerId(ElectronicInvoiceHeaderEntity headerEntity, boolean required) {
         String tins = headerEntity.getTins();
-        if (tins != null && !tins.isBlank()) {
-            TaxpayerEntity seller = taxpayerService.findByTaxId(tins)
-                    .orElseGet(() -> taxpayerService.save(TaxpayerEntity.builder()
-                            .taxId(tins)
-                            .name("UNKNOWN SELLER")
-                            .type(null)
-                            .build()));
-           /* headerEntity.setSellerTaxpayer(seller);*/
+        if (tins == null || tins.isBlank()) {
+            if (required) {
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                        "شناسه اقتصادی فروشنده الزامی است.");
+            }
+            return null;
         }
 
-        // Buyer (optional) - اول از tinb (شناسه اقتصادی خریدار) استفاده می‌کنیم، اگر نبود از bid (شناسه ملی خریدار)
-        String tinb = headerEntity.getTinb();
-        String bid = headerEntity.getBid();
-        
-        TaxpayerEntity buyer = null;
-        
-        // اول سعی می‌کنیم با tinb (شناسه اقتصادی) پیدا کنیم
-        if (tinb != null && !tinb.isBlank()) {
-            buyer = taxpayerService.findByTaxId(tinb)
-                    .orElse(null);
+        TaxpayerEntity seller = taxpayerService.findByTaxId(tins.trim())
+                .filter(taxpayer -> Boolean.TRUE.equals(taxpayer.getIsActive()))
+                .orElse(null);
+        if (seller == null && required) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "مودی فروشنده ثبت‌شده و فعال یافت نشد.");
         }
-        
-        // اگر با tinb پیدا نشد و bid وجود دارد، با bid (شناسه ملی) جستجو می‌کنیم
-        if (buyer == null && bid != null && !bid.isBlank()) {
-            buyer = taxpayerService.findByNationalId(bid)
-                    .orElse(null);
-        }
-        
-        // اگر هنوز پیدا نشد، یک buyer جدید ایجاد می‌کنیم
-        if (buyer == null) {
-            String buyerIdentifier = tinb != null && !tinb.isBlank() ? tinb : (bid != null && !bid.isBlank() ? bid : null);
-            if (buyerIdentifier != null) {
-                TaxpayerEntity newBuyer = TaxpayerEntity.builder()
-                        .taxId(buyerIdentifier.startsWith("BUYER-") ? buyerIdentifier : "BUYER-" + buyerIdentifier)
-                        .nationalId(bid != null && !bid.isBlank() ? bid : null)
-                        .name("UNKNOWN BUYER")
-                        .type(null)
-                        .build();
-                UUID buyerId = taxpayerService.create(newBuyer);
-                buyer = taxpayerService.findById(buyerId).orElse(null);
-            }
-        }
-        
-       /* if (buyer != null) {
-            headerEntity.setBuyerTaxpayer(buyer);
-        }*/
+        return seller != null ? seller.getId() : null;
     }
+
 
     private static final int TAX_ID_LENGTH = 22;
     private static final String TAX_ID_PADDING = "XXXXXXXXXXXXXXXXXXXXXX";
