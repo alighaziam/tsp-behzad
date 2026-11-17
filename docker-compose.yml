@@ -60,6 +60,11 @@ services:
       TAX_SDK_MEMORY_ID: ${TAX_SDK_MEMORY_ID:?Set the registered tax memory ID}
       TAX_SDK_CLIENT_ID: ${TAX_SDK_CLIENT_ID:?Set the registered TSP client ID}
       TAX_SDK_PRIVATE_KEY_PATH: /run/secrets/tax-private-key
+      TAXPAYER_SYSTEM_URL: ${TAXPAYER_SYSTEM_URL:?Set the taxpayer integration URL}
+      TAX_CLIENT_ID: ${TAX_CLIENT_ID:?Set the taxpayer client ID}
+      TAX_ORG_KEY_ID: ${TAX_ORG_KEY_ID:?Set the organization encryption key ID}
+      TAX_ORG_PUBLIC_KEY: ${TAX_ORG_PUBLIC_KEY:?Set the organization public key}
+      TAX_SDK_PRIVATE_KEY_PASSWORD: ${TAX_SDK_PRIVATE_KEY_PASSWORD:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?Set explicit trusted frontend origins}
       OAUTH2_ISSUER_URI: ${OAUTH2_ISSUER_URI:?Set the trusted OAuth2 issuer URL}
       OAUTH2_JWK_SET_URI: ${OAUTH2_JWK_SET_URI:?Set the trusted OAuth2 JWK set URL}
@@ -72,7 +77,7 @@ services:
       APP_KAFKA_ENABLED: false
       
       # Disable rate limiting (optional, requires Redis)
-      RATE_LIMIT_ENABLED: false
+      RATE_LIMIT_ENABLED: true
       
       # Spring profile
       SPRING_PROFILES_ACTIVE: prod
