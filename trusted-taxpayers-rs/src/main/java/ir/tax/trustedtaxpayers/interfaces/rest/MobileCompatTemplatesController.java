@@ -44,7 +44,7 @@ public class MobileCompatTemplatesController {
 	public ResponseEntity<?> listActive(@RequestHeader(value = "Authorization", required = false) String auth) {
 		if (unauthorized(auth)) return ResponseEntity.status(401).body(Map.of("error", "unauthorized"));
 		List<TemplateEntity> actives = templateService.findAll().stream()
-				.filter(TemplateEntity::getIsActive)
+				.filter(template -> Boolean.TRUE.equals(template.getIsActive()))
 				.toList();
 		return ResponseEntity.ok(actives.stream().map(this::toDto).toList());
 	}
@@ -106,7 +106,7 @@ public class MobileCompatTemplatesController {
 		return Map.of(
 				"code", e.getCode(),
 				"name", e.getTitle(),
-				"active", e.getIsActive() ? "Y" : "N"
+				"active", Boolean.TRUE.equals(e.getIsActive()) ? "Y" : "N"
 		);
 	}
 }
