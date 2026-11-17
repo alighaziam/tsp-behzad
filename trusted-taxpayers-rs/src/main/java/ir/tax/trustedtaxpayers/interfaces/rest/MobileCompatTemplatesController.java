@@ -51,6 +51,7 @@ public class MobileCompatTemplatesController {
 
 	public record CreateTemplateRequest(@NotBlank String code, @NotBlank String name, String active) {}
 
+	@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
 	@PostMapping
 	@Operation(summary = "ایجاد قالب")
 	public ResponseEntity<?> create(@RequestHeader(value = "Authorization", required = false) String auth,
@@ -71,6 +72,7 @@ public class MobileCompatTemplatesController {
 
 	public record UpdateTemplateRequest(String name, String active) {}
 
+	@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
 	@PutMapping("/{code}")
 	@Operation(summary = "به‌روزرسانی قالب بر اساس کد")
 	public ResponseEntity<?> update(@RequestHeader(value = "Authorization", required = false) String auth,
@@ -88,6 +90,7 @@ public class MobileCompatTemplatesController {
 		return ResponseEntity.ok(toDto(updated));
 	}
 
+	@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
 	@DeleteMapping("/{code}")
 	@Operation(summary = "حذف قالب بر اساس کد")
 	public ResponseEntity<?> delete(@RequestHeader(value = "Authorization", required = false) String auth,
