@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -31,6 +32,8 @@ public interface TaxpayerRepository extends BaseRepository<TaxpayerEntity, UUID>
             Pageable pageable);
     
     Optional<TaxpayerEntity> findByTaxId(String taxId);
+
+    List<TaxpayerEntity> findByTaxIdIn(Collection<String> taxIds);
     
     Optional<TaxpayerEntity> findByNationalId(String nationalId);
     
