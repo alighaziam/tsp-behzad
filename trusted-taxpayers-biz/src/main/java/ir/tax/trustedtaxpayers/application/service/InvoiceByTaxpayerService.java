@@ -61,7 +61,8 @@ public class InvoiceByTaxpayerService {
         if (taxpayerNo == null || taxpayerNo.isBlank()) {
             return Page.empty();
         }
-        if (taxpayerRepository.findByTaxId(taxpayerNo).isEmpty()) {
+        if (taxpayerRepository.findByTaxId(taxpayerNo.trim())
+                .filter(taxpayer -> Boolean.TRUE.equals(taxpayer.getIsActive())).isEmpty()) {
             return Page.empty();
         }
         return invoiceRepository.findByTinsOrTinb(
@@ -80,7 +81,8 @@ public class InvoiceByTaxpayerService {
     @Transactional(readOnly = true)
     public List<ElectronicInvoiceHeaderEntity> loadAllInvoicesByTaxpayerNo(String taxpayerNo) {
         if (taxpayerNo == null || taxpayerNo.isBlank()
-                || taxpayerRepository.findByTaxId(taxpayerNo.trim()).isEmpty()) {
+                || taxpayerRepository.findByTaxId(taxpayerNo.trim())
+                        .filter(taxpayer -> Boolean.TRUE.equals(taxpayer.getIsActive())).isEmpty()) {
             return Collections.emptyList();
         }
         return invoiceRepository.findByTinsOrTinb(taxpayerNo.trim(), taxpayerNo.trim());
@@ -140,7 +142,9 @@ public class InvoiceByTaxpayerService {
         if (taxpayerId == null) {
             return null;
         }
-        return taxpayerRepository.findById(taxpayerId).orElse(null);
+        return taxpayerRepository.findById(taxpayerId)
+                .filter(taxpayer -> Boolean.TRUE.equals(taxpayer.getIsActive()))
+                .orElse(null);
     }
 
     private Pageable buildPageable(Integer page, Integer size, String sortBy, String direction) {
