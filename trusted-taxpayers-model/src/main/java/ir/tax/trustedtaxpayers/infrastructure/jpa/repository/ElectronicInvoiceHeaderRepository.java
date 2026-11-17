@@ -142,6 +142,21 @@ public interface ElectronicInvoiceHeaderRepository extends BaseRepository<Electr
     List<ElectronicInvoiceHeaderEntity> findBySellerTaxpayerIdOrBuyerTaxpayerId(
             UUID sellerTaxpayerId, UUID buyerTaxpayerId);*/
 
+    Page<ElectronicInvoiceHeaderEntity> findByTinsOrTinb(
+            String tins, String tinb, Pageable pageable);
+
+    Page<ElectronicInvoiceHeaderEntity> findByTins(String tins, Pageable pageable);
+
+    Page<ElectronicInvoiceHeaderEntity> findByTinb(String tinb, Pageable pageable);
+
+    List<ElectronicInvoiceHeaderEntity> findByTinsOrTinb(String tins, String tinb);
+
+    long countByTinsOrTinb(String tins, String tinb);
+
+    long countByTins(String tins);
+
+    long countByTinb(String tinb);
+
     @Query("SELECT h FROM ElectronicInvoiceHeaderEntity h WHERE h.id = :id")
     Optional<ElectronicInvoiceHeaderEntity> findHeaderManual(@Param("id") UUID id);
 }
