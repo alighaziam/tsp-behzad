@@ -12,6 +12,13 @@ import java.util.UUID;
 public interface AuditLogRepository extends BaseRepository<AuditLogEntity, UUID> {
     List<AuditLogEntity> findByActorUserId(UUID actorUserId);
     List<AuditLogEntity> findByEntityName(String entityName);
+
+    @Query("SELECT a FROM AuditLogEntity a WHERE a.entityName = :entityName "
+            + "AND a.createdOn >= :start AND a.createdOn < :end")
+    List<AuditLogEntity> findByEntityNameAndCreatedOnRange(
+            @Param("entityName") String entityName,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end);
     List<AuditLogEntity> findByAction(String action);
     List<AuditLogEntity> findByEntityNameAndEntityId(String entityName, String entityId);
     
