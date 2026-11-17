@@ -14,6 +14,8 @@ import ir.tax.trustedtaxpayers.interfaces.rest.dto.ForgotPasswordRequest;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.ForgotPasswordResponse;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.ResetPasswordRequest;
 import ir.tax.trustedtaxpayers.interfaces.rest.util.CurrentUserResolver;
+import ir.tax.trustedtaxpayers.application.rate.RateLimited;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +83,7 @@ public class AuthController {
                     @ApiResponse(responseCode = "403", description = "حساب کاربری غیرفعال")
             }
     )
+    @RateLimited(perMinute = 5)
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@Valid @RequestBody AuthLoginRequest request) {
         var result = authenticationService.authenticate(request.username(), request.password());
@@ -90,6 +93,7 @@ public class AuthController {
     }
 
     @Operation(summary = "درخواست توکن بازیابی رمز عبور")
+    @RateLimited(perMinute = 3)
     @PostMapping("/forgot-password")
     public ResponseEntity<ForgotPasswordResponse> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
@@ -101,6 +105,7 @@ public class AuthController {
     }
 
     @Operation(summary = "تنظیم رمز جدید با استفاده از توکن بازیابی")
+    @RateLimited(perMinute = 5)
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authenticationService.resetPassword(request.token(), request.newPassword());
@@ -108,6 +113,8 @@ public class AuthController {
     }
 
     @Operation(summary = "تغییر رمز عبور با رمز فعلی")
+    @RateLimited(perMinute = 5)
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/change-password")
     public ResponseEntity<Void> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
@@ -131,21 +138,19 @@ public class AuthController {
     }
 
     private String resolveUsername(HttpServletRequest request, ChangePasswordRequest body) {
-        String fromJwt = extractUsernameFromAuthorizationHeader(request);
-        if (hasText(fromJwt)) {
-            return fromJwt;
+        String authenticatedUsername = extractUsernameFromAuthorizationHeader(request);
+        if (!hasText(authenticatedUsername)) {
+            authenticatedUsername = CurrentUserResolver.resolveUsername(request);
         }
-
-        String resolved = CurrentUserResolver.resolveUsername(request);
-        if (hasText(resolved)) {
-            return resolved;
+        if (!hasText(authenticatedUsername)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Authentication is required to change a password.");
         }
-
-        if (hasText(body.username())) {
-            return body.username();
+        if (hasText(body.username()) && !authenticatedUsername.equalsIgnoreCase(body.username().trim())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "The requested username does not match the authenticated account.");
         }
-
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "امکان تشخیص کاربر برای تغییر رمز وجود ندارد.");
+        return authenticatedUsername;
     }
 
     private String extractUsernameFromAuthorizationHeader(HttpServletRequest request) {
