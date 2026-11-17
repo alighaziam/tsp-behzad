@@ -20,6 +20,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/mobile-compat/api/service-usage")
+@org.springframework.security.access.prepost.PreAuthorize("hasAuthority('ADMIN')")
 @RequiredArgsConstructor
 @Tag(name = "Mobile-Compat Service Usage Reports", description = "Summary and simple trend for service access/usage")
 public class MobileCompatServiceUsageController {
