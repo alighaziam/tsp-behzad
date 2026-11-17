@@ -141,7 +141,9 @@ public class InvoiceFormSubmissionController {
 
         return ResponseEntity.ok(java.util.Map.of(
                 "headerId", submitResult.headerId,
-                "taxId", submitResult.taxId
+                "taxId", submitResult.taxId,
+                "transmissionStatus", submitResult.transmissionStatus,
+                "transmissionMessage", submitResult.transmissionMessage
         ));
     }
 
