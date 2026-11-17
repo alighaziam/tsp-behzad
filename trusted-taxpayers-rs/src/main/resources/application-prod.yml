@@ -16,7 +16,13 @@ spring:
     open-in-view: false
   security:
     oauth2:
-      resourceserver:
+      resourceservice:
+  access:
+    webhook:
+      enabled: ${SERVICE_ACCESS_WEBHOOK_ENABLED:false}
+      allowed-hosts: ${SERVICE_ACCESS_WEBHOOK_ALLOWED_HOSTS:}
+
+server:
         jwt:
           issuer-uri: ${OAUTH2_ISSUER_URI}
           jwk-set-uri: ${OAUTH2_JWK_SET_URI}
