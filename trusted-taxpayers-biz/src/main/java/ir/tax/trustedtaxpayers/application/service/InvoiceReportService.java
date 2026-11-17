@@ -74,57 +74,44 @@ public class InvoiceReportService {
     public InvoiceReportResponseDto fetchReport(InvoiceReportFilter filter, Pageable pageable, List<ReportTaxpayerDto> taxpayers) {
         Specification<ElectronicInvoiceSystemEntity> specification = buildSpecification(filter);
         Page<ElectronicInvoiceSystemEntity> page = systemRepository.findAll(specification, pageable);
-        // فرض می‌کنیم page خروجی متد findAll شماست
         List<ElectronicInvoiceSystemEntity> content = page.getContent();
 
-        for (ElectronicInvoiceSystemEntity systemEntity : content) {
-            UUID currentId = systemEntity.getId();
-            System.out.println("Processing System Entity ID: " + currentId);
+        Map<UUID, ElectronicInvoiceHeaderEntity> headersById = headerRepository.findAllById(
+                        content.stream().map(ElectronicInvoiceSystemEntity::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(ElectronicInvoiceHeaderEntity::getId, header -> header));
+        content.forEach(system -> system.setHeader(headersById.get(system.getId())));
 
-            // پیدا کردن هدر بر اساس آی‌دی
-            Optional<ElectronicInvoiceHeaderEntity> headerOptional = headerRepository.findHeaderManual(currentId);
-
-            if (headerOptional.isPresent()) {
-                ElectronicInvoiceHeaderEntity header = headerOptional.get();
-                System.out.println("Header found for ID: " + currentId);
-
-                // ست کردن هدر در موجودیت سیستم
-                systemEntity.setHeader(header);
-            } else {
-                System.out.println("WARNING: No header found for ID: " + currentId);
-                // اینجا می‌توانید متوجه شوید که آیا دیتای یتیم (Orphan) در جدول SYSTEM دارید یا خیر
-            }
-        }
-
-
-        List<InvoiceReportItemDto> items = page.getContent().stream()
-                .map(this::mapToItemDto)
+        Map<String, TaxpayerEntity> taxpayersByTaxId = loadTaxpayersByTaxId(headersById.values());
+        List<InvoiceReportItemDto> items = content.stream()
+                .map(system -> mapToItemDto(system, taxpayersByTaxId))
                 .toList();
 
         List<InvoiceStatusSummaryDto> summary = summarize(filter);
-
         return new InvoiceReportResponseDto(
-                items,
-                page.getTotalElements(),
-                page.getNumber(),
-                page.getSize(),
-                summary,
-                taxpayers
-        );
+                items, page.getTotalElements(), page.getNumber(), page.getSize(), summary, taxpayers);
     }
 
     @Transactional(readOnly = true)
     public String exportCsv(InvoiceReportFilter filter, int maxRows) {
         Specification<ElectronicInvoiceSystemEntity> specification = buildSpecification(filter);
-        List<ElectronicInvoiceSystemEntity> results = new ArrayList<>(systemRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdOn")));
+        List<ElectronicInvoiceSystemEntity> results = new ArrayList<>(
+                systemRepository.findAll(specification, Sort.by(Sort.Direction.DESC, "createdOn")));
         if (maxRows > 0 && results.size() > maxRows) {
             results = results.subList(0, maxRows);
         }
 
+        Map<UUID, ElectronicInvoiceHeaderEntity> headersById = headerRepository.findAllById(
+                        results.stream().map(ElectronicInvoiceSystemEntity::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(ElectronicInvoiceHeaderEntity::getId, header -> header));
+        results.forEach(system -> system.setHeader(headersById.get(system.getId())));
+        Map<String, TaxpayerEntity> taxpayersByTaxId = loadTaxpayersByTaxId(headersById.values());
+
         StringBuilder csv = new StringBuilder();
         csv.append("TaxId,InvoiceNumber,TemplateCode,PatternNumber,InvoiceSubject,SellerTaxpayerNo,SellerName,BuyerTaxpayerNo,BuyerName,TotalAmount,CreatedOn,StatusTimestamp,Status,RejectionCode,RejectionDescription,ReferenceNumber\n");
         for (ElectronicInvoiceSystemEntity systemEntity : results) {
-            InvoiceReportItemDto dto = mapToItemDto(systemEntity);
+            InvoiceReportItemDto dto = mapToItemDto(systemEntity, taxpayersByTaxId);
             csv.append(quote(dto.taxId())).append(',')
                .append(quote(dto.invoiceNumber())).append(',')
                .append(quote(dto.templateCode())).append(',')
@@ -237,7 +224,26 @@ public class InvoiceReportService {
         return predicates;
     }
 
-    private InvoiceReportItemDto mapToItemDto(ElectronicInvoiceSystemEntity systemEntity) {
+    private Map<String, TaxpayerEntity> loadTaxpayersByTaxId(
+            java.util.Collection<ElectronicInvoiceHeaderEntity> headers) {
+        Set<String> taxIds = headers.stream()
+                .flatMap(header -> java.util.stream.Stream.of(header.getTins(), header.getTinb()))
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.toSet());
+        if (taxIds.isEmpty()) {
+            return Map.of();
+        }
+        return taxpayerRepository.findByTaxIdIn(taxIds).stream()
+                .collect(Collectors.toMap(
+                        taxpayer -> taxpayer.getTaxId().toUpperCase(Locale.ROOT),
+                        taxpayer -> taxpayer,
+                        (first, second) -> first
+                ));
+    }
+
+    private InvoiceReportItemDto mapToItemDto(
+            ElectronicInvoiceSystemEntity systemEntity,
+            Map<String, TaxpayerEntity> taxpayersByTaxId) {
         ElectronicInvoiceHeaderEntity header = systemEntity.getHeader();
         if (header == null) {
             header = headerRepository.findById(systemEntity.getId())
@@ -246,34 +252,18 @@ public class InvoiceReportService {
         }
 
         String sellerNo = header.getTins();
-        String sellerName = sellerNo == null ? null
-                : taxpayerRepository.findByTaxId(sellerNo).map(TaxpayerEntity::getName).orElse(null);
         String buyerNo = header.getTinb();
-        String buyerName = buyerNo == null ? null
-                : taxpayerRepository.findByTaxId(buyerNo).map(TaxpayerEntity::getName).orElse(null);
+        TaxpayerEntity seller = sellerNo == null ? null : taxpayersByTaxId.get(sellerNo.toUpperCase(Locale.ROOT));
+        TaxpayerEntity buyer = buyerNo == null ? null : taxpayersByTaxId.get(buyerNo.toUpperCase(Locale.ROOT));
         Integer subject = header.getIns() != null ? header.getIns().getValue() : null;
         String subjectLabel = header.getIns() != null ? header.getIns().getPersianName() : null;
 
         return new InvoiceReportItemDto(
-                header.getId(),
-                header.getTaxId(),
-                header.getInno(),
-                header.getTemplateCode(),
-                header.getInp(),
-                subject,
-                subjectLabel,
-                sellerNo,
-                sellerName,
-                buyerNo,
-                buyerName,
-                header.getTbill(),
-                header.getCreatedOn(),
-                systemEntity.getSrvdt(),
-                systemEntity.getSts(),
-                systemEntity.getRejcode(),
-                systemEntity.getRejdesc(),
-                systemEntity.getReferenceNumber()
-        );
+                header.getId(), header.getTaxId(), header.getInno(), header.getTemplateCode(),
+                header.getInp(), subject, subjectLabel, sellerNo, seller != null ? seller.getName() : null,
+                buyerNo, buyer != null ? buyer.getName() : null, header.getTbill(), header.getCreatedOn(),
+                systemEntity.getSrvdt(), systemEntity.getSts(), systemEntity.getRejcode(),
+                systemEntity.getRejdesc(), systemEntity.getReferenceNumber());
     }
 
 
