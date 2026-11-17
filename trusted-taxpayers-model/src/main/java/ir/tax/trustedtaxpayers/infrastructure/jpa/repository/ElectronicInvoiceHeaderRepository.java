@@ -142,6 +142,16 @@ public interface ElectronicInvoiceHeaderRepository extends BaseRepository<Electr
     List<ElectronicInvoiceHeaderEntity> findBySellerTaxpayerIdOrBuyerTaxpayerId(
             UUID sellerTaxpayerId, UUID buyerTaxpayerId);*/
 
+    Page<ElectronicInvoiceHeaderEntity> findByTemplateCode(String templateCode, Pageable pageable);
+
+    Page<ElectronicInvoiceHeaderEntity> findByTemplateCodeIn(List<String> templateCodes, Pageable pageable);
+
+    List<ElectronicInvoiceHeaderEntity> findByTemplateCodeIn(List<String> templateCodes);
+
+    long countByTemplateCode(String templateCode);
+
+    long countByTemplateCodeIn(List<String> templateCodes);
+
     Page<ElectronicInvoiceHeaderEntity> findByTinsOrTinb(
             String tins, String tinb, Pageable pageable);
 
