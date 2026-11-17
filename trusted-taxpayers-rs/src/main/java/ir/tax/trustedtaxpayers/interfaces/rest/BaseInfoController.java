@@ -31,6 +31,7 @@ import java.util.UUID;
  */
 @RestController
 @RequestMapping("/api/base-info")
+@org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
 @Tag(name = "Base Info Management", description = "مدیریت اطلاعات پایه\n\nراهنمای سریع:\n- Base: /api/base-info\n- دریافت بر اساس category: GET /api/base-info/by-category?category=CATEGORY_NAME\n")
 public class BaseInfoController extends BaseController<BaseInfoEntity, UUID> {
     
