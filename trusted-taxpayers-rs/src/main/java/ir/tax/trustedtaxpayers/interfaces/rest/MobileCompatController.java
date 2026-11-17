@@ -1,6 +1,8 @@
 package ir.tax.trustedtaxpayers.interfaces.rest;
 
 import ir.tax.trustedtaxpayers.application.security.JwtService;
+import ir.tax.trustedtaxpayers.application.rate.RateLimited;
+import org.springframework.security.access.prepost.PreAuthorize;
 import ir.tax.trustedtaxpayers.application.service.SettingService;
 import ir.tax.trustedtaxpayers.application.service.TaxpayerService;
 import ir.tax.trustedtaxpayers.application.service.UserAuthenticationService;
@@ -49,6 +51,7 @@ public class MobileCompatController {
      * Compatibility login delegates to the same credential verification and
      * token issuer used by the canonical authentication API.
      */
+    @RateLimited(perMinute = 5)
     @PostMapping("/auth/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> body) {
         Object usernameValue = body.get("username");
@@ -83,6 +86,7 @@ public class MobileCompatController {
         ));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping("/api/settings")
     public ResponseEntity<List<Map<String, Object>>> listSettings(
             @RequestHeader(value = "Authorization", required = false) String auth) {
@@ -93,6 +97,7 @@ public class MobileCompatController {
         return ResponseEntity.ok(settings.stream().map(this::toSettingDto).toList());
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping("/api/settings")
     public ResponseEntity<Map<String, Object>> upsertSetting(
             @RequestHeader(value = "Authorization", required = false) String auth,
@@ -125,6 +130,7 @@ public class MobileCompatController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @GetMapping("/api/taxpayers")
     public ResponseEntity<Map<String, Object>> listTaxpayers(
             @RequestHeader(value = "Authorization", required = false) String auth,
@@ -140,7 +146,10 @@ public class MobileCompatController {
         int size = Math.min(200, Math.max(1, pageSize));
         Sort.Direction dir = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
         String sortProp = switch (sort) {
-            case "national_id", "name", "is_active", "created_at" -> sort;
+            case "national_id" -> "nationalId";
+            case "name" -> "name";
+            case "is_active" -> "isActive";
+            case "created_at" -> "createdOn";
             default -> "id";
         };
         Pageable pageable = PageRequest.of(p, size, Sort.by(dir, sortProp));
@@ -154,9 +163,10 @@ public class MobileCompatController {
         Map<String, Object> resp = new HashMap<>();
         resp.put("items", result.getContent().stream().map(t -> Map.of(
                 "id", t.getId(),
-                "national_id", t.getTaxId(),
-                "name", t.getName(),
-                "is_active", true
+                "national_id", t.getNationalId() != null ? t.getNationalId() : "",
+                "taxpayer_no", t.getTaxId() != null ? t.getTaxId() : "",
+                "name", t.getName() != null ? t.getName() : "",
+                "is_active", Boolean.TRUE.equals(t.getIsActive())
         )).toList());
         resp.put("page", page);
         resp.put("pageSize", size);
