@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -36,10 +37,14 @@ class MobileCompatSmokeTest {
     @MockBean
     private TaxSdkProperties taxSdkProperties;
 
-    private String authorization() {
+    private String authorization(String... roles) {
         String token = jwtService.generate("mobile-test-user", 60_000L,
-                Map.of("roles", List.of("ROLE_ADMIN", "ROLE_USER")));
+                Map.of("roles", List.of(roles)));
         return "Bearer " + token;
+    }
+
+    private String authorization() {
+        return authorization("ADMIN", "USER");
     }
 
     @Test
@@ -55,6 +60,32 @@ class MobileCompatSmokeTest {
         mockMvc.perform(get("/mobile-compat/api/taxpayers")
                         .header(HttpHeaders.AUTHORIZATION, authorization()))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Settings read requires administrator authority")
+    void settingsReadRequiresAdmin() throws Exception {
+        mockMvc.perform(get("/mobile-compat/api/settings")
+                        .header(HttpHeaders.AUTHORIZATION, authorization("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Settings write requires administrator authority")
+    void settingsWriteRequiresAdmin() throws Exception {
+        mockMvc.perform(post("/mobile-compat/api/settings")
+                        .header(HttpHeaders.AUTHORIZATION, authorization("USER"))
+                        .contentType("application/json")
+                        .content("{\"key\":\"feature.flag\",\"value\":\"true\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Taxpayer list requires administrator authority")
+    void taxpayersRequireAdmin() throws Exception {
+        mockMvc.perform(get("/mobile-compat/api/taxpayers")
+                        .header(HttpHeaders.AUTHORIZATION, authorization("USER")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
