@@ -7,6 +7,7 @@ import ir.tax.trustedtaxpayers.infrastructure.jpa.repository.ElectronicInvoiceSy
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +15,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Service for managing invoice transmission to external taxpayer system
@@ -36,14 +36,17 @@ public class InvoiceTransmissionService {
     private final ElectronicInvoiceHeaderRepository headerRepository;
     private final ElectronicInvoiceSystemRepository systemRepository;
     private final InvoiceSubmissionDelegate submissionDelegate;
+    private final ObjectProvider<InvoiceTransmissionService> selfProvider;
     
     public InvoiceTransmissionService(
             ElectronicInvoiceHeaderRepository headerRepository,
             ElectronicInvoiceSystemRepository systemRepository,
-            InvoiceSubmissionDelegate submissionDelegate) {
+            InvoiceSubmissionDelegate submissionDelegate,
+            ObjectProvider<InvoiceTransmissionService> selfProvider) {
         this.headerRepository = headerRepository;
         this.systemRepository = systemRepository;
         this.submissionDelegate = submissionDelegate;
+        this.selfProvider = selfProvider;
     }
     
     /**
@@ -57,7 +60,7 @@ public class InvoiceTransmissionService {
         logger.info("Starting transmission for invoice: {}", invoiceId);
         
         // دریافت صورتحساب از دیتابیس
-        ElectronicInvoiceHeaderEntity invoice = headerRepository.findById(invoiceId)
+        ElectronicInvoiceHeaderEntity invoice = headerRepository.findByIdForTransmission(invoiceId)
             .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
         
         // دریافت یا ساخت رکورد سیستم
@@ -72,9 +75,19 @@ public class InvoiceTransmissionService {
                 "Invoice already in final status: " + currentStatus);
         }
         
+        // Persist a deterministic UID before the external call. If the database
+        // transaction rolls back after an ambiguous network outcome, the same
+        // invoice ID still produces the same packet UID on the next attempt.
+        if (systemEntity.getUniqueId() == null) {
+            systemEntity.setUniqueId(UUID.nameUUIDFromBytes(
+                    ("tsp-invoice:" + invoiceId).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            systemEntity.setUpdatedOn(OffsetDateTime.now());
+            systemRepository.saveAndFlush(systemEntity);
+        }
+
         // ارسال صورتحساب به سامانه مودیان
         try {
-            TransmissionResponse response = submissionDelegate.submitInvoice(invoice);
+            TransmissionResponse response = submissionDelegate.submitInvoice(invoice, systemEntity.getUniqueId().toString());
             
             // به‌روزرسانی وضعیت در دیتابیس
             updateSystemStatus(systemEntity, response);
@@ -146,7 +159,9 @@ public class InvoiceTransmissionService {
         return "ACCEPTED".equalsIgnoreCase(status) 
             || "REJECTED".equalsIgnoreCase(status)
             || "CANCELLED".equalsIgnoreCase(status)
-            || "FAILED".equalsIgnoreCase(status);
+            || "FAILED".equalsIgnoreCase(status)
+            || "SUBMITTED".equalsIgnoreCase(status)
+            || "PENDING".equalsIgnoreCase(status);
     }
     
     /**
@@ -193,7 +208,7 @@ public class InvoiceTransmissionService {
     public CompletableFuture<TransmissionResult> transmitInvoiceAsync(UUID invoiceId) {
         logger.info("Starting async transmission for invoice: {}", invoiceId);
         try {
-            TransmissionResult result = transmitInvoice(invoiceId);
+            TransmissionResult result = selfProvider.getObject().transmitInvoice(invoiceId);
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
             logger.error("Async transmission failed for invoice {}", invoiceId, e);
@@ -210,54 +225,37 @@ public class InvoiceTransmissionService {
     @Async("asyncExecutor")
     public CompletableFuture<BatchTransmissionResult> transmitInvoicesBatchAsync(List<UUID> invoiceIds) {
         logger.info("Starting batch transmission for {} invoices", invoiceIds.size());
-        
+
         BatchTransmissionResult.Builder builder = new BatchTransmissionResult.Builder();
-        AtomicInteger successCount = new AtomicInteger(0);
-        AtomicInteger failureCount = new AtomicInteger(0);
-        
-        List<CompletableFuture<TransmissionResult>> futures = invoiceIds.stream()
-            .map(invoiceId -> transmitInvoiceAsync(invoiceId)
-                .thenApply(result -> {
-                    if (result.isSuccessful()) {
-                        successCount.incrementAndGet();
-                    } else {
-                        failureCount.incrementAndGet();
-                    }
-                    builder.addResult(invoiceId, result);
-                    return result;
-                })
-                .exceptionally(throwable -> {
-                    failureCount.incrementAndGet();
-                    TransmissionResult errorResult = new TransmissionResult(
-                        invoiceId,
-                        null,
-                        "TRANSMISSION_ERROR",
-                        "Failed: " + throwable.getMessage(),
-                        null,
-                        null,
-                        null
-                    );
-                    builder.addResult(invoiceId, errorResult);
-                    return errorResult;
-                })
-            )
-            .toList();
-        
-        // انتظار برای تمام درخواست‌ها
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        
-        BatchTransmissionResult result = builder
-            .total(invoiceIds.size())
-            .successful(successCount.get())
-            .failed(failureCount.get())
-            .build();
-        
+        int successful = 0;
+        int failed = 0;
+
+        // Run one async parent and process each invoice through its transactional proxy.
+        // Scheduling child tasks on the same bounded executor can starve or reject work.
+        for (UUID invoiceId : invoiceIds) {
+            TransmissionResult result;
+            try {
+                result = selfProvider.getObject().transmitInvoice(invoiceId);
+            } catch (Exception e) {
+                logger.error("Batch transmission failed for invoice {}", invoiceId, e);
+                result = new TransmissionResult(invoiceId, null, "TRANSMISSION_ERROR",
+                        "Failed: " + e.getMessage(), null, null, null);
+            }
+            builder.addResult(invoiceId, result);
+            if (result.isSuccessful()) {
+                successful++;
+            } else {
+                failed++;
+            }
+        }
+
+        BatchTransmissionResult result = builder.total(invoiceIds.size())
+                .successful(successful).failed(failed).build();
         logger.info("Batch transmission completed: {} successful, {} failed out of {} total",
-            result.getSuccessful(), result.getFailed(), result.getTotal());
-        
+                result.getSuccessful(), result.getFailed(), result.getTotal());
         return CompletableFuture.completedFuture(result);
     }
-    
+
     /**
      * Retry ارسال برای صورتحساب‌های FAILED یا REJECTED
      * 
@@ -267,83 +265,93 @@ public class InvoiceTransmissionService {
     @Transactional
     public TransmissionResult retryFailedInvoice(UUID invoiceId) {
         logger.info("Retrying transmission for failed invoice: {}", invoiceId);
-        
-        TransmissionStatus currentStatus = getTransmissionStatus(invoiceId);
-        
-        // بررسی اینکه صورتحساب قابل retry باشد
-        if (!"FAILED".equalsIgnoreCase(currentStatus.getStatus()) 
-            && !"REJECTED".equalsIgnoreCase(currentStatus.getStatus())) {
-            logger.warn("Invoice {} is not in retriable status: {}", invoiceId, currentStatus.getStatus());
-            
-            // ساخت نتیجه برای status غیرقابل retry
-            ElectronicInvoiceHeaderEntity invoice = headerRepository.findById(invoiceId)
+
+        // Lock in the same order as normal transmission: header, then system row.
+        ElectronicInvoiceHeaderEntity invoice = headerRepository.findByIdForTransmission(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
-            
-            return new TransmissionResult(
-                invoiceId,
-                invoice.getTaxId(),
-                "NOT_RETRIABLE",
-                "Invoice status is not retriable: " + currentStatus.getStatus(),
-                null,
-                null,
-                null
-            );
+        ElectronicInvoiceSystemEntity systemEntity = systemRepository.findByHeaderIdForUpdate(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Invoice transmission state not found: " + invoiceId));
+        String currentStatus = systemEntity.getSts();
+
+        if (!"FAILED".equalsIgnoreCase(currentStatus)
+                && !"REJECTED".equalsIgnoreCase(currentStatus)) {
+            logger.warn("Invoice {} is not in retriable status: {}", invoiceId, currentStatus);
+            return new TransmissionResult(invoiceId, invoice.getTaxId(), "NOT_RETRIABLE",
+                    "Invoice status is not retriable: " + currentStatus, null, null, null);
         }
-        
-        // reset وضعیت به DRAFT برای ارسال مجدد
-        ElectronicInvoiceSystemEntity systemEntity = systemRepository.findByHeaderId(invoiceId)
-            .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
-        
+
         systemEntity.setSts("DRAFT");
         systemEntity.setRejcode(null);
         systemEntity.setRejdesc(null);
         systemEntity.setUpdatedOn(OffsetDateTime.now());
         systemRepository.save(systemEntity);
-        
-        // تلاش برای ارسال مجدد
-        return transmitInvoice(invoiceId);
+
+        return selfProvider.getObject().transmitInvoice(invoiceId);
     }
-    
+
+    @Async("asyncExecutor")
+    public CompletableFuture<TransmissionResult> retryFailedInvoiceAsync(UUID invoiceId) {
+        try {
+            return CompletableFuture.completedFuture(selfProvider.getObject().retryFailedInvoice(invoiceId));
+        } catch (Exception e) {
+            logger.error("Async retry failed for invoice {}", invoiceId, e);
+            return CompletableFuture.completedFuture(new TransmissionResult(
+                    invoiceId, null, "TRANSMISSION_ERROR", "Retry failed: " + e.getMessage(),
+                    null, null, null));
+        }
+    }
+
     /**
      * Retry انبوه برای تمام صورتحساب‌های FAILED یا REJECTED
      * 
      * @return نتیجه Retry انبوه
      */
     @Async("asyncExecutor")
-    @Transactional(readOnly = true)
     public CompletableFuture<BatchTransmissionResult> retryAllFailedInvoicesAsync() {
         logger.info("Starting batch retry for all failed invoices");
-        
-        // دریافت تمام صورتحساب‌های FAILED
+
         List<ElectronicInvoiceSystemEntity> failedInvoices = systemRepository.findBySts("FAILED");
-        
-        // دریافت تمام صورتحساب‌های REJECTED
         List<ElectronicInvoiceSystemEntity> rejectedInvoices = systemRepository.findBySts("REJECTED");
-        
-        List<UUID> allFailedIds = failedInvoices.stream()
-            .map(ElectronicInvoiceSystemEntity::getId)
-            .toList();
-        
-        List<UUID> allRejectedIds = rejectedInvoices.stream()
-            .map(ElectronicInvoiceSystemEntity::getId)
-            .toList();
-        
-        List<UUID> allRetryIds = new java.util.ArrayList<>();
-        allRetryIds.addAll(allFailedIds);
-        allRetryIds.addAll(allRejectedIds);
-        
-        logger.info("Found {} FAILED and {} REJECTED invoices to retry",
-            allFailedIds.size(), allRejectedIds.size());
-        
-        // استفاده از batch async transmission
-        return transmitInvoicesBatchAsync(allRetryIds);
+        List<UUID> retryIds = new java.util.ArrayList<>();
+        failedInvoices.stream().map(ElectronicInvoiceSystemEntity::getId).forEach(retryIds::add);
+        rejectedInvoices.stream().map(ElectronicInvoiceSystemEntity::getId).forEach(retryIds::add);
+
+        BatchTransmissionResult.Builder builder = new BatchTransmissionResult.Builder();
+        int successful = 0;
+        int failed = 0;
+        for (UUID invoiceId : retryIds) {
+            TransmissionResult result;
+            try {
+                result = selfProvider.getObject().retryFailedInvoice(invoiceId);
+            } catch (Exception e) {
+                logger.error("Batch retry failed for invoice {}", invoiceId, e);
+                result = new TransmissionResult(invoiceId, null, "TRANSMISSION_ERROR",
+                        "Retry failed: " + e.getMessage(), null, null, null);
+            }
+            builder.addResult(invoiceId, result);
+            if (result.isSuccessful()) {
+                successful++;
+            } else {
+                failed++;
+            }
+        }
+
+        BatchTransmissionResult result = builder.total(retryIds.size())
+                .successful(successful).failed(failed).build();
+        logger.info("Batch retry completed: {} successful, {} failed out of {} total",
+                result.getSuccessful(), result.getFailed(), result.getTotal());
+        return CompletableFuture.completedFuture(result);
     }
-    
+
     /**
      * واسط برای ارسال صورتحساب (برای جداسازی مسئولیت‌ها)
      */
     public interface InvoiceSubmissionDelegate {
         TransmissionResponse submitInvoice(ElectronicInvoiceHeaderEntity invoice);
+
+        default TransmissionResponse submitInvoice(ElectronicInvoiceHeaderEntity invoice, String uid) {
+            return submitInvoice(invoice);
+        }
     }
     
     /**
@@ -384,6 +392,10 @@ public class InvoiceTransmissionService {
         
         public static TransmissionResponse failure(String rejectionCode, String rejectionDescription) {
             return new TransmissionResponse("REJECTED", "Submission rejected", rejectionCode, rejectionDescription);
+        }
+
+        public static TransmissionResponse retryableFailure(String code, String description) {
+            return new TransmissionResponse("FAILED", "Submission outcome is not confirmed", code, description);
         }
     }
     
