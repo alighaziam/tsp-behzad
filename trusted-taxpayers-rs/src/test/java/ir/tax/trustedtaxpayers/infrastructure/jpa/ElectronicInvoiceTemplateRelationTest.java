@@ -42,6 +42,7 @@ class ElectronicInvoiceTemplateRelationTest {
         entityManager.flush();
 
         UUID invoiceId = invoice.getId();
+        UUID templateId = template.getId();
         entityManager.clear();
 
         ElectronicInvoiceHeaderEntity reloaded = entityManager.find(ElectronicInvoiceHeaderEntity.class, invoiceId);
@@ -49,6 +50,7 @@ class ElectronicInvoiceTemplateRelationTest {
         assertThat(reloaded).isNotNull();
         assertThat(reloaded.getTemplate()).isNotNull();
         assertThat(reloaded.getTemplate().getCode()).isEqualTo(templateCode);
+        assertThat(reloaded.getTemplate().getId()).isEqualTo(templateId);
         assertThat(reloaded.getTemplate().getId()).isNotEqualTo(invoiceId);
     }
 }
