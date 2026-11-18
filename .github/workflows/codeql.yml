@@ -23,7 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         language:
-          - java-kotlin
           - actions
     steps:
       - name: Checkout
@@ -32,10 +31,7 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.language == 'java-kotlin' && 'autobuild' || 'none' }}
-      - name: Autobuild
-        if: matrix.language == 'java-kotlin'
-        uses: github/codeql-action/autobuild@v3
+          build-mode: none
       - name: Analyze
         uses: github/codeql-action/analyze@v3
 
