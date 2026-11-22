@@ -84,17 +84,59 @@ public final class ProductionEnvironmentValidator implements InitializingBean {
             }
         }
 
+        validateMailPort();
+
         Path privateKey = Path.of(environment.getRequiredProperty("tax.sdk.private-key-path"))
                 .toAbsolutePath().normalize();
-        if (!Files.isRegularFile(privateKey) || !Files.isReadable(privateKey)) {
-            throw new IllegalStateException(
-                    "Tax SDK private key must be a readable regular file mounted into the production runtime.");
+        try {
+            if (!Files.isRegularFile(privateKey) || !Files.isReadable(privateKey)
+                    || Files.size(privateKey) == 0) {
+                throw new IllegalStateException(
+                        "Tax SDK private key must be a non-empty, readable regular file mounted into production.");
+            }
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Tax SDK private key cannot be inspected in the production runtime.");
         }
 
-        if (Boolean.parseBoolean(environment.getProperty("service.access.webhook.enabled", "false"))
-                && !hasText(environment.getProperty("service.access.webhook.allowed-hosts"))) {
+        if (Boolean.parseBoolean(environment.getProperty("service.access.webhook.enabled", "false"))) {
+            validateWebhookAllowList(environment.getProperty("service.access.webhook.allowed-hosts"));
+        }
+    }
+
+    private void validateMailPort() {
+        String configuredPort = environment.getProperty("spring.mail.port", "587");
+        try {
+            int port = Integer.parseInt(configuredPort);
+            if (port < 1 || port > 65535) {
+                throw new NumberFormatException("out of range");
+            }
+        } catch (NumberFormatException exception) {
+            throw new IllegalStateException("spring.mail.port must be an integer between 1 and 65535.");
+        }
+    }
+
+    private void validateWebhookAllowList(String configuredHosts) {
+        if (!hasText(configuredHosts)) {
             throw new IllegalStateException(
                     "Outbound webhooks cannot be enabled without an explicit destination host allow-list.");
+        }
+
+        for (String entry : configuredHosts.split(",", -1)) {
+            String host = entry.trim();
+            if (!hasText(host) || host.contains("*")) {
+                throw new IllegalStateException(
+                        "Webhook allow-list entries must be explicit hostnames or IP addresses without wildcards.");
+            }
+            try {
+                URI uri = URI.create("https://" + host);
+                if (!hasText(uri.getHost()) || uri.getUserInfo() != null || uri.getPort() != -1
+                        || uri.getRawPath() != null || uri.getRawQuery() != null || uri.getRawFragment() != null) {
+                    throw new IllegalArgumentException();
+                }
+            } catch (RuntimeException exception) {
+                throw new IllegalStateException(
+                        "Invalid webhook allow-list entry; configure hostnames only, separated by commas.");
+            }
         }
     }
 
