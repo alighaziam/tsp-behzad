@@ -82,6 +82,14 @@ public class UserAuthenticationService {
     }
 
     @Transactional
+    public void cancelPasswordReset(String token) {
+        passwordResetTokenRepository.findByToken(token).ifPresent(resetToken -> {
+            resetToken.setIsActive(false);
+            passwordResetTokenRepository.save(resetToken);
+        });
+    }
+
+    @Transactional
     public void resetPassword(String token, String newPassword) {
         PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "توکن بازیابی معتبر نیست."));
