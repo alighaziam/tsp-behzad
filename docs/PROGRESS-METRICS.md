@@ -1,25 +1,33 @@
 # Standardized Progress Assessment
 
-- Assessment date: 2026-11-20
-- Assessed commit: `7ae1d3c882702c5767c9587e5da8c0eef079e7c2` on `main`
-- Status: initial evidence snapshot. No weighted percentage is assigned until the full six-dimension rubric and production evidence are assessed.
+- Assessment date: 2026-11-22
+- Assessed commit: `4954850ed10215ffee602dc84a0c70328ee79f26` on `main`
+- Scope: zero-cost local development and deterministic mock-based verification. Live production connectivity is tracked separately and is not claimed.
 
 ## Verified state
 
-- Trusted Taxpayers CI: [run 44713275605](https://github.com/alighaziam/tsp-behzad/actions/runs/44713275605) — passed.
-- CodeQL: [run 44713275762](https://github.com/alighaziam/tsp-behzad/actions/runs/44713275762) — passed.
-- No open pull requests or open issues were found. PR #6 (invoice-template relation assertions) and PR #7 (CodeQL) are merged.
-- The repository includes production configuration and service-integration guidance. These documents require deployment-owned Oracle, OAuth2 issuer/JWKS, taxpayer-system and tax-SDK endpoints, client identifiers, and mounted signing-key material.
-- Current main CI is green; that does not establish compatibility with the real Oracle schema or live taxpayer services.
+- Trusted Taxpayers CI: [run 45004762341](https://github.com/alighaziam/tsp-behzad/actions/runs/45004762341) — passed.
+- CodeQL: [run 45004762304](https://github.com/alighaziam/tsp-behzad/actions/runs/45004762304) — passed.
+- Existing `application-test.yml` provides H2 in Oracle compatibility mode, isolated schema creation, simple cache, disabled Redis/Kafka infrastructure and a disabled gRPC test port.
+- Added [MOCK_ENVIRONMENT.md](../MOCK_ENVIRONMENT.md) describing database, identity, tax gateway, tax SDK and email simulation boundaries.
+- Existing Mockito tests cover tax submission idempotency, confirmed/rejected/pending/unknown inquiry outcomes, password-reset email content and validation, and production configuration validation.
+- Production configuration validator remains active only for `prod`; it does not claim to verify live endpoints.
 
-## Remaining release gates
+## Mock-ready scope
 
-- Access to the approved Oracle schema and a production-like database for migration/schema validation.
-- Real identity-provider and taxpayer-system endpoints, credentials, and signing material supplied through a secret manager.
-- End-to-end verification of the tax SDK integration using the approved environment.
-- Password-reset delivery: the production guide states that no email/SMS delivery integration is present. A verified provider and single-use delivery flow are required; token disclosure must not be re-enabled as a workaround.
-- Re-run the historical H2/entity-column compatibility checks against the current main branch before relying on H2 as a substitute for Oracle validation.
+- Database behavior is exercised locally with H2; Oracle-specific SQL and production migration compatibility remain unverified.
+- Identity behavior can be tested with synthetic JWTs; real issuer discovery and JWKS rotation remain unverified.
+- Taxpayer/Modian and tax SDK behavior is simulated at application boundaries; no real tax packet is submitted.
+- Email behavior is tested with a mocked `JavaMailSender`; no message is delivered to a real mailbox.
+- Redis, Kafka and remote gRPC infrastructure are not required for the isolated test profile.
+
+## Remaining external-only release gates
+
+- Approved Oracle schema/environment for vendor-specific SQL and migration validation.
+- Approved identity-provider issuer/JWKS and real signing-key material.
+- Tax authority and tax SDK non-production endpoints for signed contract and end-to-end tests.
+- SMTP credentials and an approved delivery environment for real mailbox verification.
 
 ## Operating rule
 
-Never commit credentials, private keys, taxpayer signing material, or production URLs containing secrets. Mark live integrations blocked until the system owner supplies the required environment.
+The mock-based development/test scope is ready to use without paid services or external credentials. Live production integrations remain **not tested**, not failed. Never commit secrets or weaken the production validator to make the mock profile pass.
