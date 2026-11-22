@@ -21,6 +21,10 @@ The production profile intentionally requires deployment-specific values. Do not
 | `TAX_SDK_CLIENT_ID` | Tax SDK client identifier |
 | `TAX_SDK_PRIVATE_KEY_PATH` | Absolute path to the mounted private key |
 | `TAX_SDK_PRIVATE_KEY_PASSWORD` | Optional private-key password |
+| `MAIL_HOST` | Production SMTP host |
+| `MAIL_PORT` | SMTP port (defaults to 587) |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP credentials |
+| `APP_PUBLIC_BASE_URL` | Public HTTPS frontend base URL used to build reset links |
 
 ## Deployment checklist
 
@@ -33,6 +37,6 @@ The production profile intentionally requires deployment-specific values. Do not
 
 No production credentials or endpoints are supplied by this repository. They must be provided by the system owner/operator.
 
-## Password reset delivery requirement
+## Password reset delivery
 
-The public forgot-password endpoint deliberately does not disclose whether an account exists and never returns a usable reset token when the `prod` profile is active. The current repository does not contain an email/SMS delivery integration. Therefore production password recovery is not operational until a verified delivery provider is configured and the reset token is delivered through a short-lived, single-use link or code. Do not re-enable token disclosure in the API response as a workaround.
+The production profile sends reset links through the configured SMTP provider when the identifier is an email address. The public forgot-password response never discloses account existence or returns the reset token. Reset links are single-use and expire after 30 minutes. Configure `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, and an HTTPS `APP_PUBLIC_BASE_URL`; the application validates these settings before starting. Username-only reset requests do not have a delivery destination and therefore require the user to submit the registered email address. Never re-enable token disclosure in the API response as a workaround.
