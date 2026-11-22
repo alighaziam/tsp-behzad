@@ -130,7 +130,7 @@ public final class ProductionEnvironmentValidator implements InitializingBean {
             try {
                 URI uri = URI.create("https://" + host);
                 if (!hasText(uri.getHost()) || uri.getUserInfo() != null || uri.getPort() != -1
-                        || uri.getRawPath() != null || uri.getRawQuery() != null || uri.getRawFragment() != null) {
+                        || hasText(uri.getRawPath()) || uri.getRawQuery() != null || uri.getRawFragment() != null) {
                     throw new IllegalArgumentException();
                 }
             } catch (RuntimeException exception) {
