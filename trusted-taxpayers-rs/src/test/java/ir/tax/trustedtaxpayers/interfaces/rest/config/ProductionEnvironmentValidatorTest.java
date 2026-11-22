@@ -13,9 +13,8 @@ class ProductionEnvironmentValidatorTest {
 
     @Test
     void acceptsCompleteHttpsConfigurationAndReadableSigningKey() throws Exception {
-        Path key = Files.createTempFile("tax-sdk-test-", ".pem");
+        Path key = createKey();
         try {
-            Files.writeString(key, "test-only-key-material");
             MockEnvironment environment = completeEnvironment(key);
             assertDoesNotThrow(() -> new ProductionEnvironmentValidator(environment).validate());
         } finally {
@@ -25,7 +24,7 @@ class ProductionEnvironmentValidatorTest {
 
     @Test
     void rejectsMissingProductionConfiguration() throws Exception {
-        Path key = Files.createTempFile("tax-sdk-test-", ".pem");
+        Path key = createKey();
         try {
             MockEnvironment environment = completeEnvironment(key);
             environment.setProperty("tax.sdk.client-id", " ");
@@ -38,7 +37,7 @@ class ProductionEnvironmentValidatorTest {
 
     @Test
     void rejectsInsecureExternalEndpoints() throws Exception {
-        Path key = Files.createTempFile("tax-sdk-test-", ".pem");
+        Path key = createKey();
         try {
             MockEnvironment environment = completeEnvironment(key);
             environment.setProperty("taxpayer-system.base-url", "http://tax.example.test");
@@ -50,17 +49,60 @@ class ProductionEnvironmentValidatorTest {
     }
 
     @Test
-    void rejectsEnabledWebhookWithoutExplicitHostAllowList() throws Exception {
-        Path key = Files.createTempFile("tax-sdk-test-", ".pem");
+    void rejectsInvalidMailPort() throws Exception {
+        Path key = createKey();
         try {
             MockEnvironment environment = completeEnvironment(key);
-            environment.setProperty("service.access.webhook.enabled", "true");
-            environment.setProperty("service.access.webhook.allowed-hosts", "");
+            environment.setProperty("spring.mail.port", "70000");
             assertThrows(IllegalStateException.class,
                     () -> new ProductionEnvironmentValidator(environment).validate());
         } finally {
             Files.deleteIfExists(key);
         }
+    }
+
+    @Test
+    void rejectsEmptySigningKeyFile() throws Exception {
+        Path key = Files.createTempFile("tax-sdk-empty-", ".pem");
+        try {
+            assertThrows(IllegalStateException.class,
+                    () -> new ProductionEnvironmentValidator(completeEnvironment(key)).validate());
+        } finally {
+            Files.deleteIfExists(key);
+        }
+    }
+
+    @Test
+    void acceptsExplicitWebhookHostAllowList() throws Exception {
+        Path key = createKey();
+        try {
+            MockEnvironment environment = completeEnvironment(key)
+                    .withProperty("service.access.webhook.enabled", "true")
+                    .withProperty("service.access.webhook.allowed-hosts", "hooks.example.test,10.20.30.40");
+            assertDoesNotThrow(() -> new ProductionEnvironmentValidator(environment).validate());
+        } finally {
+            Files.deleteIfExists(key);
+        }
+    }
+
+    @Test
+    void rejectsWildcardOrUrlWebhookAllowListEntries() throws Exception {
+        Path key = createKey();
+        try {
+            MockEnvironment environment = completeEnvironment(key)
+                    .withProperty("service.access.webhook.enabled", "true")
+                    .withProperty("service.access.webhook.allowed-hosts", "*.example.test,https://other.example.test");
+            assertThrows(IllegalStateException.class,
+                    () -> new ProductionEnvironmentValidator(environment).validate());
+        } finally {
+            Files.deleteIfExists(key);
+        }
+    }
+
+    private Path createKey() throws Exception {
+        Path key = Files.createTempFile("tax-sdk-test-", ".pem");
+        Files.writeString(key, "test-only-key-material");
+        return key;
     }
 
     private MockEnvironment completeEnvironment(Path key) {
@@ -79,6 +121,7 @@ class ProductionEnvironmentValidatorTest {
                 .withProperty("tax.sdk.client-id", "test-sdk-client")
                 .withProperty("tax.sdk.private-key-path", key.toString())
                 .withProperty("spring.mail.host", "smtp.example.test")
+                .withProperty("spring.mail.port", "587")
                 .withProperty("spring.mail.username", "noreply@example.test")
                 .withProperty("spring.mail.password", "test-only")
                 .withProperty("app.public-base-url", "https://app.example.test");
