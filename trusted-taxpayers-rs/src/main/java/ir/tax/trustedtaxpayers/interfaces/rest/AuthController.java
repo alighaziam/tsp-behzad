@@ -102,13 +102,16 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<ForgotPasswordResponse> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request) {
-        Optional<String> token = authenticationService.initiatePasswordReset(request.identifier());
         boolean production = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        Optional<String> token = production && !isEmailAddress(request.identifier())
+                ? Optional.empty()
+                : authenticationService.initiatePasswordReset(request.identifier());
         // Keep the public response identical for known and unknown accounts.
         if (production && token.isPresent() && isEmailAddress(request.identifier())) {
             try {
                 passwordResetEmailServiceProvider.getObject().send(request.identifier(), token.get());
             } catch (Exception deliveryFailure) {
+                authenticationService.cancelPasswordReset(token.get());
                 log.warn("Password reset email delivery failed; the public response remains unchanged.");
             }
         }
