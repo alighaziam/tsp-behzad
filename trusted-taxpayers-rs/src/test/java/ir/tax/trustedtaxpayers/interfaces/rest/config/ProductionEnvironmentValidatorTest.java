@@ -77,6 +77,10 @@ class ProductionEnvironmentValidatorTest {
                 .withProperty("tax.sdk.base-url", "https://sdk.example.test")
                 .withProperty("tax.sdk.memory-id", "test-memory")
                 .withProperty("tax.sdk.client-id", "test-sdk-client")
-                .withProperty("tax.sdk.private-key-path", key.toString());
+                .withProperty("tax.sdk.private-key-path", key.toString())
+                .withProperty("spring.mail.host", "smtp.example.test")
+                .withProperty("spring.mail.username", "noreply@example.test")
+                .withProperty("spring.mail.password", "test-only")
+                .withProperty("app.public-base-url", "https://app.example.test");
     }
 }
