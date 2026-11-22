@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Fails production startup when deployment-owned integrations are incomplete or unsafe.
@@ -47,6 +48,9 @@ public final class ProductionEnvironmentValidator implements InitializingBean {
             "app.public-base-url"
     );
 
+    private static final List<String> SECRET_PROPERTIES = List.of(
+            "spring.datasource.password", "spring.mail.password");
+
     private final Environment environment;
 
     public ProductionEnvironmentValidator(Environment environment) {
@@ -68,6 +72,13 @@ public final class ProductionEnvironmentValidator implements InitializingBean {
         if (!missing.isEmpty()) {
             throw new IllegalStateException("Missing required production configuration properties: "
                     + String.join(", ", missing));
+        }
+
+        for (String key : SECRET_PROPERTIES) {
+            if (isPlaceholderSecret(environment.getProperty(key))) {
+                throw new IllegalStateException(
+                        "Production secret must not use a known placeholder value: " + key);
+            }
         }
 
         for (String key : HTTPS_ENDPOINTS) {
@@ -138,6 +149,15 @@ public final class ProductionEnvironmentValidator implements InitializingBean {
                         "Invalid webhook allow-list entry; configure hostnames only, separated by commas.");
             }
         }
+    }
+
+    private boolean isPlaceholderSecret(String value) {
+        if (!hasText(value)) return true;
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        return normalized.contains("${")
+                || List.of("password", "changeme", "change-me", "change_me", "test",
+                        "test-only", "secret", "placeholder", "your-password", "your_password")
+                .contains(normalized);
     }
 
     private boolean hasText(String value) {

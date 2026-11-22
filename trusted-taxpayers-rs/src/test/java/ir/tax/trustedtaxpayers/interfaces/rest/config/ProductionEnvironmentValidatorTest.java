@@ -36,6 +36,20 @@ class ProductionEnvironmentValidatorTest {
     }
 
     @Test
+    void rejectsPlaceholderOrUnresolvedProductionSecrets() throws Exception {
+        Path key = createKey();
+        try {
+            MockEnvironment placeholder = completeEnvironment(key)
+                    .withProperty("spring.datasource.password", "test-only");
+            assertThrows(IllegalStateException.class,
+                    () -> new ProductionEnvironmentValidator(placeholder).validate());
+
+        } finally {
+            Files.deleteIfExists(key);
+        }
+    }
+
+    @Test
     void rejectsInsecureExternalEndpoints() throws Exception {
         Path key = createKey();
         try {
@@ -109,7 +123,7 @@ class ProductionEnvironmentValidatorTest {
         return new MockEnvironment()
                 .withProperty("spring.datasource.url", "jdbc:oracle:thin:@db.example.test:1521/service")
                 .withProperty("spring.datasource.username", "app")
-                .withProperty("spring.datasource.password", "test-only")
+                .withProperty("spring.datasource.password", "integration-test-secret-value")
                 .withProperty("spring.security.oauth2.resourceserver.jwt.issuer-uri", "https://id.example.test/issuer")
                 .withProperty("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", "https://id.example.test/jwks")
                 .withProperty("taxpayer-system.base-url", "https://tax.example.test")
@@ -123,7 +137,7 @@ class ProductionEnvironmentValidatorTest {
                 .withProperty("spring.mail.host", "smtp.example.test")
                 .withProperty("spring.mail.port", "587")
                 .withProperty("spring.mail.username", "noreply@example.test")
-                .withProperty("spring.mail.password", "test-only")
+                .withProperty("spring.mail.password", "integration-test-secret-value")
                 .withProperty("app.public-base-url", "https://app.example.test");
     }
 }
