@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import ir.tax.trustedtaxpayers.application.security.JwtService;
 import ir.tax.trustedtaxpayers.application.service.UserAuthenticationService;
+import ir.tax.trustedtaxpayers.application.service.PasswordResetEmailService;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.AuthLoginRequest;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.ChangePasswordRequest;
 import ir.tax.trustedtaxpayers.interfaces.rest.dto.ForgotPasswordRequest;
@@ -29,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.ObjectProvider;
 import java.util.Arrays;
 
 import java.util.Collections;
@@ -55,12 +57,15 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserAuthenticationService authenticationService;
     private final Environment environment;
+    private final ObjectProvider<PasswordResetEmailService> passwordResetEmailServiceProvider;
 
     public AuthController(JwtService jwtService, UserAuthenticationService authenticationService,
-                         Environment environment) {
+                         Environment environment,
+                         ObjectProvider<PasswordResetEmailService> passwordResetEmailServiceProvider) {
         this.jwtService = jwtService;
         this.authenticationService = authenticationService;
         this.environment = environment;
+        this.passwordResetEmailServiceProvider = passwordResetEmailServiceProvider;
     }
 
     @Operation(summary = "بررسی سلامت سرویس احراز هویت")
@@ -99,8 +104,14 @@ public class AuthController {
             @Valid @RequestBody ForgotPasswordRequest request) {
         Optional<String> token = authenticationService.initiatePasswordReset(request.identifier());
         boolean production = Arrays.asList(environment.getActiveProfiles()).contains("prod");
-        // Never disclose account existence or a usable reset token through a public endpoint.
-        // Production email/SMS delivery must be integrated before enabling password recovery there.
+        // Keep the public response identical for known and unknown accounts.
+        if (production && token.isPresent() && isEmailAddress(request.identifier())) {
+            try {
+                passwordResetEmailServiceProvider.getObject().send(request.identifier(), token.get());
+            } catch (Exception deliveryFailure) {
+                log.warn("Password reset email delivery failed; the public response remains unchanged.");
+            }
+        }
         return ResponseEntity.ok(new ForgotPasswordResponse(true, production ? null : token.orElse(null)));
     }
 
@@ -165,6 +176,10 @@ public class AuthController {
             log.debug("Unable to parse JWT token for change-password request: {}", ex.getMessage());
             return null;
         }
+    }
+
+    private boolean isEmailAddress(String value) {
+        return value != null && value.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     }
 
     private boolean hasText(String value) {
