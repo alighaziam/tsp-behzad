@@ -1,7 +1,7 @@
 # Standardized Progress Assessment
 
 - Assessment date: 2026-11-22
-- Assessed commit: `4954850ed10215ffee602dc84a0c70328ee79f26` on `main`
+- Assessed commit: `9d84ee01b0195203e472047274d1611a7e64bf59` on `main`
 - Scope: zero-cost local development and deterministic mock-based verification. Live production connectivity is tracked separately and is not claimed.
 
 ## Verified state
@@ -31,3 +31,10 @@
 ## Operating rule
 
 The mock-based development/test scope is ready to use without paid services or external credentials. Live production integrations remain **not tested**, not failed. Never commit secrets or weaken the production validator to make the mock profile pass.
+
+
+## Latest verified production secret validation — 22 November 2026
+
+- The current main branch includes rejection of known placeholder and unresolved values for production datasource and SMTP passwords, with regression coverage.
+- Trusted Taxpayers CI passed on main commit `9d84ee01b0195203e472047274d1611a7e64bf59` (run [45015248940](https://github.com/alighaziam/tsp-behzad/actions/runs/45015248940)); CodeQL passed (run [45015248931](https://github.com/alighaziam/tsp-behzad/actions/runs/45015248931)).
+- This validates configuration checks and deterministic tests only; real Oracle, identity-provider, tax authority, tax SDK, and SMTP integrations remain external release gates. No percentage increase is claimed without a full weighted reassessment.
