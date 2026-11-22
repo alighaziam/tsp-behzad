@@ -36,7 +36,7 @@ mvn -pl trusted-taxpayers-rs -am -Dtest=ModianTransferAdapterTest test
 - An unavailable inquiry fails closed; no duplicate packet is sent when the previous outcome is unknown.
 - A packet is sent with its persisted UID only when inquiry reports no existing packet.
 - Password reset messages are captured by a fake `JavaMailSender`; invalid recipients and non-HTTPS reset URLs are rejected.
-- Production configuration validation accepts complete placeholder HTTPS configuration and temporary test key material, while rejecting missing properties, insecure URLs, unreadable keys, and unsafe webhook configuration.
+- Production configuration validation accepts complete placeholder HTTPS configuration and temporary test key material, while rejecting missing properties, insecure URLs, invalid SMTP ports, empty or unreadable signing-key files, and malformed or wildcard webhook allow-lists.
 
 ## Production boundary
 
