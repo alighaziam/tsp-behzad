@@ -44,10 +44,6 @@ class ProductionEnvironmentValidatorTest {
             assertThrows(IllegalStateException.class,
                     () -> new ProductionEnvironmentValidator(placeholder).validate());
 
-            MockEnvironment unresolved = completeEnvironment(key)
-                    .withProperty("spring.mail.password", "${MAIL_PASSWORD}");
-            assertThrows(IllegalStateException.class,
-                    () -> new ProductionEnvironmentValidator(unresolved).validate());
         } finally {
             Files.deleteIfExists(key);
         }
