@@ -32,14 +32,19 @@ public final class ProductionEnvironmentValidator implements InitializingBean {
             "tax.sdk.base-url",
             "tax.sdk.memory-id",
             "tax.sdk.client-id",
-            "tax.sdk.private-key-path"
+            "tax.sdk.private-key-path",
+            "spring.mail.host",
+            "spring.mail.username",
+            "spring.mail.password",
+            "app.public-base-url"
     );
 
     private static final List<String> HTTPS_ENDPOINTS = List.of(
             "spring.security.oauth2.resourceserver.jwt.issuer-uri",
             "spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
             "taxpayer-system.base-url",
-            "tax.sdk.base-url"
+            "tax.sdk.base-url",
+            "app.public-base-url"
     );
 
     private final Environment environment;
